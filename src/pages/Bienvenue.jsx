@@ -7,7 +7,8 @@ export default function Bienvenue() {
   const { user, profil, actions } = useSession();
   const prenom = profil?.nom || user.displayName;
   const [nom, setNom] = useState('');
-  const [code, setCode] = useState('');
+  // Arrivé par le bouton d'un courriel d'invitation : le code est dans l'adresse.
+  const [code, setCode] = useState(() => new URLSearchParams(window.location.search).get('code') || '');
   const [erreur, setErreur] = useState('');
   const [occupe, setOccupe] = useState(false);
 

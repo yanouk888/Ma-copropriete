@@ -1,14 +1,15 @@
 {
   "name": "ma-copropriete",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "private": true,
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "node --test src/calc/*.test.js",
-    "regles": "npx --yes firebase-tools@13 emulators:exec --project demo-copro --only auth,firestore \"node essais/regles.mjs\""
+    "test": "node functions/copier-calculs.mjs && node --test src/calc/*.test.js functions/src/*.test.js",
+    "regles": "npx --yes firebase-tools@13 emulators:exec --project demo-copro --only auth,firestore \"node essais/regles.mjs\"",
+    "fonctions": "npx --yes firebase-tools@13 emulators:exec --project demo-copro --only auth,firestore,functions \"node essais/fonctions.mjs\""
   },
   "dependencies": {
     "firebase": "^10.12.0",

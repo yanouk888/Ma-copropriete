@@ -48,6 +48,13 @@ function Coquille() {
   const [onglet, setOnglet] = useState('apercu');
   const miseAJour = useMiseAJour();
   const { Ecran } = ONGLETS.find((o) => o.cle === onglet);
+  // Arrivé par une invitation, le code reste dans l'adresse jusqu'ici. On
+  // l'efface dès que la copropriété s'affiche — pas après la confirmation du
+  // serveur, qui arrive parfois après l'affichage — pour que recharger ou
+  // partager l'adresse ne le repropose pas.
+  useEffect(() => {
+    if (window.location.search) window.history.replaceState(null, '', window.location.pathname);
+  }, []);
   // Chaque onglet s'ouvre en haut de page, pas là où le précédent était rendu.
   useEffect(() => { window.scrollTo(0, 0); }, [onglet]);
   return (

@@ -1,10 +1,13 @@
 # Déploie le dos Firebase : règles Firestore et Cloud Functions.
 #
-# Le site, lui, est publié par Vercel à chaque poussée — rien à faire ici.
+# Le site, lui, est construit par web-image.yml et servi par le NAS.
 #
-# Ce qu'il faut dans le dépôt (Settings → Secrets and variables → Actions) :
-#   - variable FIREBASE_PROJECT_ID : l'identifiant du projet Firebase ;
-#   - secret FIREBASE_SERVICE_ACCOUNT : la clé JSON d'un compte de service.
+# Ce qu'il faut dans le dépôt (Settings → Secrets and variables → Actions) —
+# marche à suivre complète dans deploy/README.md :
+#   - variables FIREBASE_PROJECT_ID, ADRESSE_APP, EXPEDITEUR ;
+#   - secret FIREBASE_SERVICE_ACCOUNT : la clé JSON du compte de déploiement.
+# La clé Resend, elle, n'est pas ici : elle vit dans Secret Manager, chez
+# Google, où seules les fonctions la lisent.
 # Tant que la variable manque, le workflow ne fait rien plutôt que d'échouer :
 # le dépôt existe avant le projet Firebase.
 name: Firebase
@@ -19,6 +22,9 @@ on:
       - "src/calc/**"
       - "firestore.rules"
       - "firebase.json"
+  # Déployer à la demande depuis l'onglet Actions : la première fois, et après
+  # avoir changé une variable ou la clé Resend.
+  workflow_dispatch:
 
 jobs:
   deployer:
@@ -39,6 +45,21 @@ jobs:
 
       - name: Installer les dépendances des fonctions
         run: npm install --prefix functions
+
+      # Les réglages des fonctions qui ne sont pas des secrets. Écrits ici, à
+      # partir des variables du dépôt, plutôt que versionnés : le nom de
+      # domaine n'est jamais écrit en dur (docs/empreinte-numerique.md).
+      - name: Écrire les réglages des fonctions
+        env:
+          ADRESSE_APP: ${{ vars.ADRESSE_APP }}
+          EXPEDITEUR: ${{ vars.EXPEDITEUR }}
+        run: |
+          if [ -z "$ADRESSE_APP" ] || [ -z "$EXPEDITEUR" ]; then
+            echo "Variables ADRESSE_APP ou EXPEDITEUR absentes : voir deploy/README.md, étape 4." >&2
+            exit 1
+          fi
+          # Entre guillemets : l'expéditeur contient des espaces et des chevrons.
+          printf 'ADRESSE_APP="%s"\nEXPEDITEUR="%s"\n' "$ADRESSE_APP" "$EXPEDITEUR" > functions/.env
 
       - name: Déployer les règles et les fonctions
         env:

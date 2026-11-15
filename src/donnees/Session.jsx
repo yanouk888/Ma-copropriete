@@ -3,13 +3,14 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import {
   onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword,
-  signInWithPopup, signOut, sendPasswordResetEmail,
+  signInWithPopup, signOut, sendPasswordResetEmail, sendEmailVerification,
 } from 'firebase/auth';
 import {
   doc, collection, onSnapshot, getDoc, getDocs, getDocFromServer, setDoc, query, where, limit, updateDoc, writeBatch,
   arrayUnion, arrayRemove, deleteField, serverTimestamp,
 } from 'firebase/firestore';
-import { auth, db, fournisseurGoogle } from '../firebase';
+import { httpsCallable } from 'firebase/functions';
+import { auth, db, fonctions, fournisseurGoogle } from '../firebase';
 import { nouveauCode, normaliserCode, codeValide } from './code';
 
 const Contexte = createContext(null);
@@ -30,7 +31,13 @@ const MESSAGES = {
   'permission-denied': 'Accès refusé.',
   unavailable: 'Pas de réseau. Réessayez une fois reconnecté.',
 };
-export const messageErreur = (e) => MESSAGES[e?.code] || e?.message || 'Une erreur est survenue.';
+export const messageErreur = (e) => {
+  if (MESSAGES[e?.code]) return MESSAGES[e.code];
+  // Les fonctions renvoient leurs refus déjà rédigés en français (« Pas plus
+  // de 10 invitations par jour… ») ; seul « internal » ne dit rien d'utile.
+  if (e?.code?.startsWith('functions/') && e.code !== 'functions/internal') return e.message;
+  return e?.message && !e.code?.startsWith('functions/') ? e.message : 'Une erreur est survenue. Réessayez dans un moment.';
+};
 
 export function SessionProvider({ children, surErreur }) {
   // undefined = on ne sait pas encore ; null = personne.
@@ -186,6 +193,17 @@ export function SessionProvider({ children, surErreur }) {
         // écoutes figées — l'écran d'accueil restait affiché à quelqu'un qui
         // venait de créer ou de rejoindre sa copropriété.
         await setDoc(doc(db, 'users', u.uid), { nom }, { merge: true });
+        // Le lien de vérification part par Resend (réglage SMTP de Firebase,
+        // deploy/README.md). Sans attendre et sans bloquer : une adresse non
+        // vérifiée n'empêche rien, elle dit seulement qu'on n'est pas sûr
+        // qu'elle soit bonne — ce qui compte pour « mot de passe oublié ».
+        sendEmailVerification(u).catch(() => {});
+      },
+      renvoyerVerification: () => sendEmailVerification(auth.currentUser),
+
+      /** Envoie le code d'invitation par courriel, par une fonction : la clé Resend reste au serveur. */
+      async inviterParCourriel(courriel) {
+        await httpsCallable(fonctions, 'inviterParCourriel')({ courriel });
       },
       google: () => signInWithPopup(auth, fournisseurGoogle),
       motDePasseOublie: (courriel) => sendPasswordResetEmail(auth, courriel),

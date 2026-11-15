@@ -19,6 +19,8 @@ qu'elle sert : **l'autosuffisance** — que les loyers paient tout, ou presque.
 - **À plusieurs** : comptes par courriel ou Google, code d'invitation, données
   partagées en direct.
 - **Notifications poussées**, et installation sur l'écran d'accueil.
+- **Courriels** (Resend) : mot de passe oublié et vérification d'adresse,
+  invitation par courriel, résumé le premier du mois.
 
 ## Comment elle compte
 
@@ -56,50 +58,19 @@ ressaisir le solde recale.
 
 Tous ces calculs sont dans `src/calc/budget.js`, avec leurs essais.
 
-## Mise en route
+## Mise en ligne
 
-Le site ne fait rien tant qu'il n'est pas relié à un projet Firebase.
+Le site est servi par le NAS à `copropriete.ricard.app` ; comptes, base,
+fonctions et notifications vivent chez Firebase ; les courriels partent par
+Resend. **Toute la marche à suivre, pas à pas, est dans
+[`deploy/README.md`](deploy/README.md)** : projet Firebase, connexion Google,
+Resend, GitHub, NAS et tunnel Cloudflare.
 
-### 1. Firebase
+Une fois en place, une fusion dans `main` part toute seule en production :
 
-1. Créer un projet dans la [console Firebase](https://console.firebase.google.com)
-   (ou reprendre un projet existant — les collections `copros`, `coproCodes`
-   et `users` ne doivent pas déjà servir à autre chose).
-2. **Authentication** → activer « Adresse courriel/mot de passe » et « Google ».
-3. **Firestore Database** → créer la base (mode production).
-4. **Paramètres du projet → Vos applications** → ajouter une application Web ;
-   noter la configuration.
-5. **Paramètres du projet → Cloud Messaging → Certificats Web Push** → générer
-   une paire de clés ; noter la clé publique.
-6. Les notifications demandent les Cloud Functions, donc le forfait **Blaze**
-   (paiement à l'usage ; à cette échelle, la facture reste nulle ou presque).
-   Sans lui, tout le reste fonctionne : seules les notifications manquent.
-
-### 2. Vercel
-
-1. Importer le dépôt dans Vercel (le `vercel.json` fait le reste).
-2. **Settings → Environment Variables** : renseigner les variables de
-   `.env.example`.
-3. Dans Firebase, **Authentication → Settings → Domaines autorisés** : ajouter
-   le domaine du site, sinon la connexion Google est refusée.
-
-### 3. Règles et fonctions
-
-Dans GitHub, **Settings → Secrets and variables → Actions** :
-
-- variable `FIREBASE_PROJECT_ID` ;
-- secret `FIREBASE_SERVICE_ACCOUNT` (clé JSON d'un compte de service, console
-  Firebase → Paramètres du projet → Comptes de service).
-
-Le workflow `firebase.yml` déploie alors les règles et les fonctions à chaque
-fusion qui les touche. À la main :
-
-```bash
-npx firebase-tools deploy --only firestore:rules,functions --project <identifiant>
-```
-
-**Les règles doivent être déployées avant le premier usage** : sans elles,
-Firestore refuse tout (mode production) — ou laisse tout ouvert (mode test).
+- **le site** : `web-image.yml` construit l'image sur GitHub Actions,
+  watchtower l'installe sur le NAS dans les cinq minutes ;
+- **le dos** : `firebase.yml` déploie règles et fonctions quand elles changent.
 
 ## Développement
 
@@ -114,16 +85,24 @@ npm run dev
 
 Avec `VITE_EMULATEURS=1`, l'application parle aux émulateurs : aucun projet
 réel, aucune donnée réelle. Les notifications poussées ne s'essaient pas ainsi
-(l'émulateur n'en envoie pas) ; elles se vérifient sur le vrai projet.
+(l'émulateur n'en envoie pas) ; elles se vérifient sur le vrai projet. Les
+courriels non plus : sans clé Resend, l'émulateur les écrit dans son journal
+au lieu de les envoyer. Il lui faut `functions/.env.local` :
+
+```
+ADRESSE_APP=http://localhost:5173
+EXPEDITEUR=Essai <essai@exemple.ca>
+```
 
 ```bash
-npm test          # les calculs
+npm test          # les calculs et le contenu des courriels
 npm run regles    # les règles Firestore (lance l'émulateur le temps de l'essai)
+npm run fonctions # invitation et résumé mensuel, contre l'émulateur
 npm run build
 ```
 
 ## Stack
 
 React + Vite · Firebase (Auth, Firestore, Cloud Functions, Cloud Messaging) ·
-Vercel · GitHub Actions. Aucune police, aucun script ni aucune analytique
+Resend · NAS Synology (Caddy, tunnel Cloudflare) · GitHub Actions. Aucune police, aucun script ni aucune analytique
 servis par un tiers ([`docs/empreinte-numerique.md`](docs/empreinte-numerique.md)).

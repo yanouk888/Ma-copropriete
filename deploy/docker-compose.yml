@@ -1,0 +1,49 @@
+# Ma copropriété sur le NAS (Container Manager → Projet `copropriete`).
+#
+# Un seul service : l'application n'a pas d'API à elle. Comptes, base,
+# fonctions, notifications et courriels vivent chez Firebase et Resend ; seuls
+# les fichiers du site sont ici. Aucun fichier de configuration à remplir sur
+# le NAS : tout est compilé dans l'image, sur GitHub Actions.
+#
+# Le tunnel Cloudflare et watchtower vivent dans le projet `infra` — dépôt
+# yanouk888/NAS_923_infrastructure. Marche à suivre : deploy/README.md.
+
+services:
+  web:
+    image: ghcr.io/yanouk888/copropriete-web:latest
+
+    # Nom unique sur toute la machine : c'est par lui que la route du tunnel
+    # désigne le conteneur (copropriete-web:80). Un service nommé `web` ne se
+    # résoudrait qu'à l'intérieur de ce projet, où cloudflared ne vit pas.
+    container_name: copropriete-web
+
+    restart: unless-stopped
+
+    labels:
+      # Suivi par le watchtower du projet `infra`, qui ne touche qu'aux
+      # conteneurs étiquetés.
+      com.centurylinklabs.watchtower.enable: "true"
+
+    # Volontairement PAS de `ports:` : joignable par cloudflared via `edge`, et
+    # par rien d'autre — ni le réseau local, ni Internet.
+    expose:
+      - "80"
+
+    networks:
+      - edge
+
+    # Pas pour économiser : pour qu'une fuite tue ce conteneur, que `restart`
+    # relance, au lieu d'asphyxier DSM et les autres applications.
+    mem_limit: 128m
+
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+# Le réseau commun de la machine, créé hors de tout projet : celui-ci s'y
+# branche sans le créer, et ne l'emportera pas en disparaissant.
+networks:
+  edge:
+    external: true

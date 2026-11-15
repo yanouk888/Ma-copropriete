@@ -1,0 +1,11 @@
+# Ce qui n'a rien à faire dans l'image : le contexte envoyé au constructeur
+# reste petit, et aucun fichier local (.env.local, journaux) ne s'y glisse.
+node_modules
+functions/node_modules
+dist
+.git
+.env
+.env.*
+*.log
+essais
+docs

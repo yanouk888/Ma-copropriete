@@ -5,7 +5,10 @@ import { Champ, Segments, Avis, useToast } from '../composants/ui';
 export default function Connexion() {
   const { actions } = useSession();
   const toast = useToast();
-  const [mode, setMode] = useState('connexion');
+  // Arrivé par une invitation : on propose d'emblée de créer un compte, et on
+  // dit pourquoi on est là. Le code reste dans l'adresse jusqu'à l'accueil.
+  const invite = new URLSearchParams(window.location.search).get('code');
+  const [mode, setMode] = useState(invite ? 'inscription' : 'connexion');
   const [nom, setNom] = useState('');
   const [courriel, setCourriel] = useState('');
   const [motDePasse, setMotDePasse] = useState('');
@@ -51,6 +54,7 @@ export default function Connexion() {
             ))}
           </svg>
         </div>
+        {invite ? <Avis ton="info">Vous avez été invité dans une copropriété. Créez votre compte (ou connectez-vous) : le code sera déjà rempli.</Avis> : null}
         <Segments libelle="Connexion ou inscription" valeur={mode} onChange={(m) => { setMode(m); setErreur(''); }}
           options={[{ valeur: 'connexion', libelle: 'Se connecter' }, { valeur: 'inscription', libelle: 'Créer un compte' }]} />
         {mode === 'inscription' ? (

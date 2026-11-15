@@ -9,8 +9,9 @@ hypothèque, planification sur 13 mois. **Le but de l'application est
 l'autosuffisance** : que les loyers couvrent toutes les sorties, et sinon, dire
 ce qui manque et ce que chacun verse.
 
-Vite + React + Firebase (Auth, Firestore, Cloud Functions, FCM). Le site est
-servi par **Vercel** ; le dos vit chez Firebase.
+Vite + React + Firebase (Auth, Firestore, Cloud Functions, FCM) + Resend
+(courriels). Le site est servi par le **NAS** à `copropriete.ricard.app` ; le
+dos vit chez Firebase. Mise en ligne pas à pas : `deploy/README.md`.
 
 Écrite sur les principes de Budget Maison (dépôt voisin), mais repartie de
 zéro et volontairement plus petite : avant d'ajouter une couche, se demander
@@ -31,7 +32,11 @@ si elle est nécessaire.
   une huitième à l'œil.
 - `firestore.rules` — le seul rempart entre les finances d'une copropriété et
   n'importe quel compte.
-- `functions/` — les notifications poussées.
+- `functions/` — les notifications poussées et les courriels (invitation,
+  résumé mensuel). Le contenu des courriels est dans `functions/src/modeles.js`,
+  en fonctions pures essayées par `npm test`.
+- `deploy/` — l'image du site, Caddy, le compose du NAS, et le guide de mise
+  en ligne (`deploy/README.md`).
 
 Le document `copros/{id}` porte toute une copropriété. Les montants des loyers
 et des dépenses récurrentes sont des **paliers** `{ depuis, montant }` : on ne
@@ -93,12 +98,25 @@ dépôts se lisent de la même façon : `memberUids`, `members`, `displayName`.
 
 ## Déploiement
 
-- **Le site** : Vercel le construit et le publie à chaque poussée
-  (`vercel.json`). La configuration Firebase lui vient de variables
-  d'environnement (`.env.example`) — jamais du code.
+- **Le site** : son image se construit sur **GitHub Actions**
+  (`web-image.yml`), jamais sur le NAS, et watchtower l'installe. La
+  configuration Firebase lui vient des variables du dépôt GitHub, passées à la
+  construction — jamais du code.
+- Ne jamais créer de fichier nommé `Dockerfile` à la racine du dépôt :
+  plusieurs plateformes changent de constructeur à sa seule présence. Il vit
+  dans `deploy/web.Dockerfile`, désigné explicitement par le workflow.
+- **La connexion Google passe par `/__/auth/`**, que Caddy relaie vers
+  `<projet>.firebaseapp.com` (`deploy/Caddyfile`), et `authDomain` vaut
+  l'adresse du site. Ne pas retirer ce relais : la connexion Google casserait
+  dans Safari. Ne pas retirer `header_up Host` non plus (« Site Not Found »).
 - **Le dos Firebase** : `.github/workflows/firebase.yml` déploie les règles et
   les fonctions quand `functions/`, `src/calc/`, `firestore.rules` ou
   `firebase.json` changent.
+- **Les courriels** : ceux du compte (mot de passe oublié, vérification)
+  partent de Firebase par le SMTP de Resend — un réglage de console, aucun
+  code. L'invitation et le résumé mensuel partent des fonctions par l'API de
+  Resend (`functions/src/courriel.js`) ; la clé vit dans Secret Manager,
+  jamais dans le dépôt ni dans GitHub.
 
 **Ne jamais appeler `updateProfile` (ni rien qui change le compte Firebase
 Auth) pendant qu'on est connecté** : le compte émet un nouveau jeton,
@@ -118,9 +136,10 @@ garde-fou entre une erreur et la production. **Si une vérification échoue, on
 ne fusionne pas** : on corrige d'abord.
 
 ```
-npm test          # les calculs
+npm test          # les calculs et le contenu des courriels
 npm run build
 npm run regles    # les règles Firestore, contre l'émulateur (si elles ont changé)
+npm run fonctions # les fonctions de courriel, contre l'émulateur (si elles ont changé)
 ```
 
 L'interface se vérifie **dans un vrai navigateur**, contre les émulateurs
@@ -150,7 +169,7 @@ chaque nouveau projet.**
 Les trois qui ne se négocient pas :
 
 1. **Rien n'est référencé.** En-tête `X-Robots-Tag: noindex, nofollow,
-   noarchive, nosnippet` sur chaque réponse (`vercel.json`), balise
+   noarchive, nosnippet` sur chaque réponse (`deploy/Caddyfile`), balise
    `<meta name="robots">` dans chaque page. Et **jamais `Disallow: /` dans
    `robots.txt`** : ça empêche le robot de lire le `noindex`, ce qui produit
    exactement l'inverse de l'effet voulu.

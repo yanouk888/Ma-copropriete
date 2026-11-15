@@ -15,10 +15,30 @@ function Inviter() {
     if (!window.confirm('Créer un nouveau code ? L\'ancien cessera de fonctionner. Les copropriétaires déjà entrés ne sont pas touchés.')) return;
     try { await actions.changerCode(copro); toast('Nouveau code créé.'); } catch (e) { toast(messageErreur(e)); }
   };
+  const [courriel, setCourriel] = useState('');
+  const [envoi, setEnvoi] = useState(false);
+  const inviter = async (e) => {
+    e.preventDefault();
+    // Le navigateur accepte « nom@x » (sans point) comme courriel ; la
+    // fonction le refuserait. Autant le dire tout de suite, sans aller-retour.
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(courriel.trim())) { toast('Ce courriel n\'est pas valide.'); return; }
+    setEnvoi(true);
+    try {
+      await actions.inviterParCourriel(courriel.trim());
+      toast(`Invitation envoyée à ${courriel.trim()}.`);
+      setCourriel('');
+    } catch (err) { toast(messageErreur(err)); } finally { setEnvoi(false); }
+  };
   return (
     <section className="carte">
       <header><h2>Inviter</h2></header>
-      <p className="discret">Donnez ce code à la personne à inviter. Elle crée son compte, puis l'entre à l'accueil.</p>
+      <form className="champ" style={{ gap: 8 }} onSubmit={inviter}>
+        <Champ libelle="Inviter par courriel" aide="La personne reçoit le code et un bouton qui ouvre l'application avec le code déjà rempli.">
+          <input type="email" value={courriel} onChange={(e) => setCourriel(e.target.value)} placeholder="nom@exemple.ca" autoComplete="off" required />
+        </Champ>
+        <button className="bouton" disabled={envoi}>{envoi ? 'Envoi…' : 'Envoyer l\'invitation'}</button>
+      </form>
+      <div className="separateur">ou donnez le code</div>
       <div className="ligne" style={{ alignItems: 'center' }}>
         <span className="code">{copro.code}</span>
         <button className="icone-bouton" onClick={copier} aria-label="Copier le code"><Icone nom="copier" /></button>
@@ -140,6 +160,8 @@ function Notifications() {
       {obstacle && !actif ? <Avis ton="info">{obstacle}</Avis> : (
         <Bascule libelle="Recevoir les notifications sur cet appareil" coche={actif} disabled={occupe} onChange={basculer} />
       )}
+      <Bascule libelle="Résumé mensuel par courriel" aide="Le premier du mois : autosuffisance, votre part, solde prévu."
+        coche={profil?.courriels?.resume !== false} onChange={(v) => actions.majProfil({ courriels: { resume: v } })} />
       {actif ? TYPES.map((t) => (
         <Bascule key={t.cle} libelle={t.libelle} coche={preferences[t.cle] !== false}
           onChange={(v) => actions.majProfil({ notifications: { [t.cle]: v } })} />
@@ -198,6 +220,15 @@ function Compte() {
         </form>
       ) : null}
       <p className="discret">Connecté : {user.email}</p>
+      {/* Une adresse non vérifiée n'empêche rien ; mais si elle est fausse,
+          « mot de passe oublié » et le résumé mensuel n'arriveront jamais. */}
+      {!user.emailVerified && user.providerData.some((p) => p.providerId === 'password') ? (
+        <Avis ton="attention">Votre adresse n'est pas encore vérifiée.{' '}
+          <button className="bouton texte" onClick={async () => {
+            try { await actions.renvoyerVerification(); toast('Courriel de vérification envoyé.'); } catch (e) { toast(messageErreur(e)); }
+          }}>Renvoyer le courriel</button>
+        </Avis>
+      ) : null}
       <div className="boutons">
         <button className="bouton contour" onClick={actions.deconnexion}>Se déconnecter</button>
         <button className="bouton danger" onClick={quitter}>Quitter la copropriété</button>

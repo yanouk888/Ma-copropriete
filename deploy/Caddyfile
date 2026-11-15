@@ -1,0 +1,97 @@
+{
+	# Cloudflare termine TLS devant le conteneur : le tunnel lui parle en HTTP,
+	# à l'intérieur du NAS. Un second chiffrement ici ne protégerait rien.
+	auto_https off
+	admin off
+}
+
+:80 {
+	root * /srv
+	encode zstd gzip
+
+	header {
+		# Rien n'est référencé (docs/empreinte-numerique.md). L'en-tête vaut pour
+		# toutes les réponses, y compris celles qui ne peuvent pas porter de
+		# <meta> : images, JSON, manifeste. robots.txt autorise l'exploration, à
+		# dessein : un « Disallow: / » empêcherait le robot de lire ce noindex.
+		X-Robots-Tag "noindex, nofollow, noarchive, nosnippet"
+		# Un clic sortant ne dit pas d'où il vient. Conséquence à connaître : ne
+		# jamais restreindre la clé d'API Firebase « par référent HTTP », elle
+		# ne recevrait plus de référent et tout serait refusé.
+		Referrer-Policy "no-referrer"
+		X-Content-Type-Options "nosniff"
+		-Server
+	}
+
+	# Fichiers émis par Vite : leur nom contient le hachage du contenu, une URL
+	# donnée ne changera jamais. Cache permanent. Le matcher `file` limite la
+	# règle aux fichiers qui existent : sans lui, un 404 sur un ancien bundle
+	# partirait marqué « immuable un an », et Cloudflare garderait l'erreur.
+	@hashed {
+		path /assets/*
+		file
+	}
+	header @hashed Cache-Control "public, max-age=31536000, immutable"
+
+	# Tout le reste garde son nom d'un déploiement à l'autre : index.html,
+	# version.json, sw.js, manifeste, icônes. Mis en cache, version.json dirait
+	# « à jour » précisément quand on ne l'est pas, et un service worker ne
+	# serait jamais renouvelé. Écrit en négatif : après le repli SPA, le chemin
+	# demandé reste « / » et une règle visant /index.html ne s'appliquerait pas.
+	@volatile not path /assets/*
+	header @volatile Cache-Control "no-cache"
+
+	# ─── Connexion Google ───
+	# La fenêtre de connexion est servie par Firebase sur
+	# <projet>.firebaseapp.com/__/auth/. On la relaie ici, sous notre propre
+	# adresse, pour deux raisons :
+	#  - Safari, et Chrome de plus en plus, cloisonnent ce qu'un site tiers
+	#    garde dans le navigateur ; servie depuis un autre domaine, la
+	#    connexion Google peut échouer sans message. Même adresse : plus de tiers.
+	#  - La fenêtre de Google affiche « continuer vers copropriete.ricard.app »
+	#    au lieu d'un nom de projet obscur.
+	# C'est l'« option 3 » de la documentation Firebase sur les navigateurs qui
+	# bloquent le stockage tiers. Un relais transparent, pas une redirection :
+	# une redirection 302 ne marche pas.
+	#
+	# header_up Host : sans lui, Caddy transmet l'en-tête Host d'origine
+	# (copropriete.ricard.app) et Firebase répond « Site Not Found » — l'erreur
+	# que signalent ceux qui placent ce relais derrière un répartiteur.
+	handle /__/auth/* {
+		reverse_proxy https://{$PROJET_FIREBASE}.firebaseapp.com {
+			header_up Host {upstream_hostport}
+		}
+	}
+	# Configuration publique du projet, que la page de connexion peut demander
+	# à sa propre adresse. Relayée par précaution : elle ne coûte rien.
+	handle /__/firebase/* {
+		reverse_proxy https://{$PROJET_FIREBASE}.firebaseapp.com {
+			header_up Host {upstream_hostport}
+		}
+	}
+
+	# Un fichier haché absent est un ancien bundle que le navigateur réclame
+	# encore : lui renvoyer index.html ferait lire du HTML comme du JavaScript.
+	# Un 404 franc laisse la détection de version faire son travail.
+	handle /assets/* {
+		file_server
+	}
+
+	# Repli SPA : toute autre adresse inconnue renvoie l'application.
+	handle {
+		try_files {path} /index.html
+		file_server
+	}
+
+	# Une erreur (le 404 d'un ancien bundle, un relais Firebase injoignable)
+	# repart sans les en-têtes posés plus haut : Caddy les efface avant de
+	# répondre en erreur. Constaté à l'essai. On les remet, surtout le noindex,
+	# qui doit couvrir toutes les réponses sans exception.
+	handle_errors {
+		header X-Robots-Tag "noindex, nofollow, noarchive, nosnippet"
+		header Referrer-Policy "no-referrer"
+		header Cache-Control "no-cache"
+		header -Server
+		respond "{err.status_code} {err.status_text}" {err.status_code}
+	}
+}

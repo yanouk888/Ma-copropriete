@@ -1,0 +1,82 @@
+# Construit l'image du site et la publie sur GitHub Container Registry à
+# chaque changement poussé sur main. Watchtower l'installe sur le NAS dans les
+# cinq minutes.
+#
+# La compilation vit ici et non sur le NAS : une compilation qui échoue sur
+# GitHub ne fait rien tomber ; la même sur la machine qui sert la production
+# mettrait tous les sites hors ligne.
+name: Image du site
+
+on:
+  push:
+    branches: [main]
+    # Un commit qui ne touche que la documentation ou le dos Firebase ne change
+    # pas un octet du bundle : le reconstruire coûterait des minutes pour rien.
+    paths-ignore:
+      - "**.md"
+      - "docs/**"
+      - "essais/**"
+      - "functions/**"
+      - "firestore.rules"
+      - "firebase.json"
+      - ".github/workflows/firebase.yml"
+  # Reconstruire à la demande depuis l'onglet Actions — notamment la première
+  # fois, et après avoir changé une variable.
+  workflow_dispatch:
+
+# Seule la dernière image compte : une construction rendue inutile par un
+# nouveau push est annulée, ce qui épargne le forfait de minutes.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  construire:
+    runs-on: ubuntu-latest
+    # Sans plafond, un travail bloqué brûle six heures de forfait.
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Se connecter au registre
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Lire le numéro de version
+        id: version
+        # L'image porte le numéro affiché dans Réglages → À propos : « quelle
+        # version tourne sur le NAS ? » se répond sans deviner.
+        run: echo "valeur=$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Construire et publier
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          # Hors de la racine et sous un autre nom, délibérément : voir son en-tête.
+          file: ./deploy/web.Dockerfile
+          push: true
+          # Variables du dépôt (Settings → Secrets and variables → Actions →
+          # Variables) : publiques par nature, elles partent dans le bundle.
+          build-args: |
+            VITE_FIREBASE_API_KEY=${{ vars.VITE_FIREBASE_API_KEY }}
+            VITE_FIREBASE_AUTH_DOMAIN=${{ vars.VITE_FIREBASE_AUTH_DOMAIN }}
+            VITE_FIREBASE_PROJECT_ID=${{ vars.FIREBASE_PROJECT_ID }}
+            VITE_FIREBASE_MESSAGING_SENDER_ID=${{ vars.VITE_FIREBASE_MESSAGING_SENDER_ID }}
+            VITE_FIREBASE_APP_ID=${{ vars.VITE_FIREBASE_APP_ID }}
+            VITE_FIREBASE_VAPID_KEY=${{ vars.VITE_FIREBASE_VAPID_KEY }}
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/copropriete-web:latest
+            ghcr.io/${{ github.repository_owner }}/copropriete-web:${{ steps.version.outputs.valeur }}
+            ghcr.io/${{ github.repository_owner }}/copropriete-web:${{ github.sha }}
+          # Sans cache, chaque build réinstallerait toutes les dépendances npm.
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

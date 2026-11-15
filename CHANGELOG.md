@@ -1,5 +1,21 @@
 # Journal des versions
 
+## 1.2.0 — 15 novembre 2026
+
+- **Inviter par courriel.** Sous Réglages → Inviter, entrez une adresse : la
+  personne reçoit le code et un bouton qui ouvre l'application avec le code
+  déjà rempli. Dix invitations par jour au plus.
+- **Un résumé par courriel le premier du mois** : taux d'autosuffisance,
+  votre part, solde prévu, et une alerte si le compte va manquer. Il se coupe
+  sous Réglages → Notifications.
+- **Votre adresse est vérifiée** à la création du compte, par un courriel. Si
+  elle ne l'est pas encore, Réglages → Compte propose de renvoyer le courriel.
+- **Les courriels de Firebase sont en français** : mot de passe oublié et
+  vérification d'adresse.
+- **L'application déménage sur copropriete.ricard.app**, servie par le NAS.
+  La connexion Google se fait désormais sous cette adresse, ce qui la rend
+  fiable dans Safari et dans l'application installée sur l'iPhone.
+
 ## 1.1.0 — 15 novembre 2026
 
 L'application devient visuelle, et elle bouge.
