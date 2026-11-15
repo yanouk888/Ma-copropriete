@@ -1,0 +1,50 @@
+# Déploie le dos Firebase : règles Firestore et Cloud Functions.
+#
+# Le site, lui, est publié par Vercel à chaque poussée — rien à faire ici.
+#
+# Ce qu'il faut dans le dépôt (Settings → Secrets and variables → Actions) :
+#   - variable FIREBASE_PROJECT_ID : l'identifiant du projet Firebase ;
+#   - secret FIREBASE_SERVICE_ACCOUNT : la clé JSON d'un compte de service.
+# Tant que la variable manque, le workflow ne fait rien plutôt que d'échouer :
+# le dépôt existe avant le projet Firebase.
+name: Firebase
+
+on:
+  push:
+    branches: [main]
+    # Seulement si le dos peut avoir changé. src/calc compte : les fonctions
+    # embarquent ces calculs (functions/copier-calculs.mjs).
+    paths:
+      - "functions/**"
+      - "src/calc/**"
+      - "firestore.rules"
+      - "firebase.json"
+
+jobs:
+  deployer:
+    if: vars.FIREBASE_PROJECT_ID != ''
+    runs-on: ubuntu-latest
+    # Sans plafond, un travail bloqué brûle six heures de forfait.
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Écrire la clé du compte de service
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: printf '%s' "$FIREBASE_SERVICE_ACCOUNT" > "$RUNNER_TEMP/sa.json"
+
+      - name: Installer les dépendances des fonctions
+        run: npm install --prefix functions
+
+      - name: Déployer les règles et les fonctions
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/sa.json
+        run: npx --yes firebase-tools@13 deploy --only firestore:rules,functions --project "${{ vars.FIREBASE_PROJECT_ID }}" --non-interactive --force
+
+      - name: Effacer la clé
+        if: always()
+        run: rm -f "$RUNNER_TEMP/sa.json"

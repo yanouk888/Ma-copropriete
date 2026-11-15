@@ -1,0 +1,16 @@
+{
+  "name": "Ma copropriété",
+  "short_name": "Ma copro",
+  "description": "Budget d'une copropriété locative : loyers, dépenses, fonds de roulement et planification.",
+  "lang": "fr-CA",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f4f6f3",
+  "theme_color": "#f4f6f3",
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

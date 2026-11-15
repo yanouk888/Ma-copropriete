@@ -1,0 +1,134 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function connecte() { return request.auth != null; }
+    function uid()      { return request.auth.uid; }
+
+    // ─────────────────────────────────────────────────────────
+    //  PROFILS — chacun lit et écrit le sien, rien d'autre. C'est là que
+    //  vivent les jetons de notification : un jeton permet d'écrire sur
+    //  l'écran verrouillé de quelqu'un, il ne se partage pas.
+    // ─────────────────────────────────────────────────────────
+    match /users/{userId} {
+      allow read, write: if connecte() && uid() == userId;
+    }
+
+    // ─────────────────────────────────────────────────────────
+    //  CODES D'INVITATION — code → copropriété.
+    //
+    //  `get` seulement, jamais `list` : il faut connaître un code pour le
+    //  lire, on ne peut pas les énumérer. Le document ne dit rien d'autre
+    //  que l'identifiant de la copropriété.
+    // ─────────────────────────────────────────────────────────
+    match /coproCodes/{code} {
+      allow get: if connecte();
+      allow list: if false;
+      // Créé dans le même lot que la copropriété (ou que son nouveau code) :
+      // getAfter lit l'état d'après le lot. Seul le gestionnaire peut poser
+      // un code, et seulement celui que porte sa copropriété.
+      allow create: if connecte()
+        && getAfter(/databases/$(database)/documents/copros/$(request.resource.data.coproId)).data.gestionnaire == uid()
+        && getAfter(/databases/$(database)/documents/copros/$(request.resource.data.coproId)).data.code == code;
+      allow update: if false;
+      // get, pas getAfter : quand la copropriété est supprimée dans le même
+      // lot, c'est son état d'avant qui dit qui la gérait.
+      allow delete: if connecte()
+        && get(/databases/$(database)/documents/copros/$(resource.data.coproId)).data.gestionnaire == uid();
+    }
+
+    // ─────────────────────────────────────────────────────────
+    //  COPROPRIÉTÉS — un document par copropriété, partagé entre ses
+    //  membres.
+    // ─────────────────────────────────────────────────────────
+    match /copros/{coproId} {
+
+      function membre()       { return connecte() && uid() in resource.data.memberUids; }
+      function gestionnaire() { return connecte() && resource.data.gestionnaire == uid(); }
+      function touche()       { return request.resource.data.diff(resource.data).affectedKeys(); }
+      // Qui a écrit et quand : toute écriture peut les poser, les fonctions
+      // s'en servent pour ne pas notifier l'auteur de son propre geste.
+      function trace()        { return ['modifiePar', 'modifieLe']; }
+
+      // Entrer avec un code : un non-membre s'ajoute lui-même, et rien
+      // d'autre. Trois garde-fous :
+      //  - il doit présenter le code en vigueur (`codeUtilise`) : connaître
+      //    l'identifiant du document ne suffit pas, sinon un ancien membre
+      //    retiré reviendrait quand il veut, même après un changement de code ;
+      //  - il entre à 0 % : c'est au gestionnaire de répartir, un arrivant ne
+      //    s'attribue pas une part ;
+      //  - les listes d'avant sont toutes conservées.
+      function entree() {
+        return connecte()
+          && !(uid() in resource.data.memberUids)
+          && touche().hasOnly(['memberUids', 'members'].concat(trace()))
+          && request.resource.data.memberUids.size() == resource.data.memberUids.size() + 1
+          && request.resource.data.memberUids.hasAll(resource.data.memberUids)
+          && uid() in request.resource.data.memberUids
+          && request.resource.data.members.diff(resource.data.members).affectedKeys().hasOnly([uid()])
+          && request.resource.data.members[uid()].codeUtilise == resource.data.code
+          && request.resource.data.members[uid()].proportion == 0;
+      }
+
+      // Partir : un membre se retire lui-même, et rien d'autre. Le
+      // gestionnaire ne part pas sans céder la gestion à quelqu'un qui reste,
+      // sinon la copropriété n'aurait plus personne pour la gérer.
+      function depart() {
+        return membre()
+          && touche().hasOnly(['memberUids', 'members', 'gestionnaire'].concat(trace()))
+          && !(uid() in request.resource.data.memberUids)
+          && request.resource.data.memberUids.size() == resource.data.memberUids.size() - 1
+          && resource.data.memberUids.hasAll(request.resource.data.memberUids)
+          && request.resource.data.members.diff(resource.data.members).affectedKeys().hasOnly([uid()])
+          && !(uid() in request.resource.data.members)
+          && (gestionnaire()
+              ? request.resource.data.gestionnaire in request.resource.data.memberUids
+              : !touche().hasAny(['gestionnaire']));
+      }
+
+      // Sa propre fiche : son nom et sa fréquence de paie, pas sa proportion.
+      function saFiche() {
+        return membre()
+          && touche().hasOnly(['members'].concat(trace()))
+          && request.resource.data.members.diff(resource.data.members).affectedKeys().hasOnly([uid()])
+          && uid() in request.resource.data.members
+          && request.resource.data.members[uid()].diff(resource.data.members[uid()]).affectedKeys()
+               .hasOnly(['displayName', 'frequencePaie']);
+      }
+
+      // Le budget : tout membre peut le modifier. La composition, la gestion
+      // et le code sont réservés au gestionnaire.
+      function budget() {
+        return membre() && !touche().hasAny(['gestionnaire', 'memberUids', 'members', 'code', 'createdAt']);
+      }
+
+      function gestion() {
+        return gestionnaire()
+          && !touche().hasAny(['createdAt'])
+          && request.resource.data.gestionnaire in request.resource.data.memberUids
+          && request.resource.data.memberUids.size() == request.resource.data.members.keys().size()
+          && request.resource.data.members.keys().hasAll(request.resource.data.memberUids)
+          // Un nouveau code n'est accepté que si son document existe après le
+          // lot : sinon la copropriété porterait un code que personne ne peut
+          // utiliser.
+          && (!touche().hasAny(['code'])
+              || getAfter(/databases/$(database)/documents/coproCodes/$(request.resource.data.code)).data.coproId == coproId);
+      }
+
+      // Membres seulement, pour `get` comme pour `list`. Entrer avec un code
+      // ne demande pas de lire le document (l'écriture s'en passe) : un
+      // non-membre ne voit donc jamais rien, même en connaissant
+      // l'identifiant.
+      allow read: if membre();
+
+      allow create: if connecte()
+        && request.resource.data.memberUids == [uid()]
+        && request.resource.data.gestionnaire == uid()
+        && request.resource.data.members.keys().hasOnly([uid()]);
+
+      allow update: if entree() || depart() || saFiche() || budget() || gestion();
+
+      allow delete: if gestionnaire();
+    }
+  }
+}

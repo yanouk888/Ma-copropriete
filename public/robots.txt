@@ -1,0 +1,6 @@
+# L'exploration est AUTORISÉE, et c'est voulu : ne pas « corriger » en
+# Disallow. Un robot interdit d'explorer ne lit jamais le noindex que porte
+# chaque réponse (en-tête X-Robots-Tag), et l'adresse peut alors paraître nue
+# dans les résultats. Voir docs/empreinte-numerique.md.
+User-agent: *
+Allow: /
