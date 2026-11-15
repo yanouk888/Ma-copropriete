@@ -3,6 +3,7 @@ import { useSession, messageErreur } from '../donnees/Session';
 import { PAIES, totalProportions } from '../calc/budget';
 import { TYPES, empechement, actives, activer, desactiver } from '../donnees/notifications';
 import { lireMontant } from '../donnees/format';
+import { chercherMiseAJour } from '../donnees/miseAJour';
 import { Feuille, Champ, Bascule, Avis, Icone, useToast } from '../composants/ui';
 
 function Inviter() {
@@ -288,6 +289,7 @@ function Compte() {
 }
 
 function APropos() {
+  const toast = useToast();
   const note = __NOUVEAUTES__;
   return (
     <section className="carte">
@@ -312,7 +314,9 @@ function APropos() {
           ))}
         </details>
       ) : null}
-      <button className="bouton contour" onClick={() => window.location.reload()}>Rechercher une mise à jour</button>
+      <button className="bouton contour" onClick={async () => {
+        if (!(await chercherMiseAJour({ recharger: true, forcer: true }))) toast('Vous avez déjà la dernière version.');
+      }}>Rechercher une mise à jour</button>
     </section>
   );
 }

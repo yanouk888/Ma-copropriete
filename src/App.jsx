@@ -4,6 +4,7 @@ import { SessionProvider, useSession } from './donnees/Session';
 import { Icone, Toasts, useToast } from './composants/ui';
 import Connexion from './pages/Connexion';
 import Logo from './composants/Logo';
+import AvisMiseAJour from './composants/AvisMiseAJour';
 import { PastilleCopro } from './composants/MesCopros';
 import Bienvenue from './pages/Bienvenue';
 import Apercu from './onglets/Apercu';
@@ -22,35 +23,8 @@ const ONGLETS = [
   { cle: 'reglages', nom: 'Réglages', Ecran: Reglages },
 ];
 
-/**
- * Dit s'il existe une version plus récente que celle qui tourne. Une
- * application posée sur l'écran d'accueil n'est jamais rechargée : sans cet
- * avis, un téléphone garde l'ancienne version des semaines.
- */
-function useMiseAJour() {
-  const [disponible, setDisponible] = useState(false);
-  useEffect(() => {
-    if (import.meta.env.DEV) return undefined;
-    const verifier = async () => {
-      try {
-        const r = await fetch(`/version.json?t=${Date.now()}`, { cache: 'no-store' });
-        const { build } = await r.json();
-        if (build && build !== __BUILD_STAMP__) setDisponible(true);
-      } catch {
-        // Hors ligne : on réessaiera au prochain retour au premier plan.
-      }
-    };
-    const auRetour = () => { if (document.visibilityState === 'visible') verifier(); };
-    verifier();
-    document.addEventListener('visibilitychange', auRetour);
-    return () => document.removeEventListener('visibilitychange', auRetour);
-  }, []);
-  return disponible;
-}
-
 function Coquille() {
   const [onglet, setOnglet] = useState('apercu');
-  const miseAJour = useMiseAJour();
   const { Ecran } = ONGLETS.find((o) => o.cle === onglet);
   // Arrivé par une invitation, le code reste dans l'adresse jusqu'ici. On
   // l'efface dès que la copropriété s'affiche — pas après la confirmation du
@@ -63,12 +37,6 @@ function Coquille() {
   useEffect(() => { window.scrollTo(0, 0); }, [onglet]);
   return (
     <>
-      {miseAJour ? (
-        <div className="bandeau" role="status">
-          Une nouvelle version est disponible.
-          <button type="button" className="bouton texte" onClick={() => window.location.reload()}>Mettre à jour</button>
-        </div>
-      ) : null}
       {/* La barre titre reste en haut à tous les écrans : la marque, et la
           copropriété ouverte — sur Revenus ou Dépenses, rien d'autre ne
           disait de laquelle il s'agit. */}
@@ -120,5 +88,7 @@ export default function App() {
       </div>
     );
   }
-  return <Toasts><AvecSession /></Toasts>;
+  // La pastille vit au-dessus de tout : elle doit paraître aussi sur l'écran
+  // de connexion, juste après une mise à jour.
+  return <Toasts><AvisMiseAJour /><AvecSession /></Toasts>;
 }
