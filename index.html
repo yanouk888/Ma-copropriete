@@ -14,8 +14,85 @@
   <meta name="theme-color" content="#111512" media="(prefers-color-scheme: dark)" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="mobile-web-app-capable" content="yes" />
+  <!-- ══ Écran d'amorçage ══
+       Peint par le navigateur avant même que le JavaScript n'arrive : on
+       n'ouvre jamais sur un écran blanc. Le logo au centre, le nom dessous,
+       au moins 1,5 seconde (demandé, comme Budget Maison), puis un fondu.
+       C'est l'application qui dit quand il peut partir (donnees/amorce.js) :
+       quand elle est UTILISABLE, pas quand React a seulement monté. Un filet
+       le retire de toute façon après 10 secondes. -->
+  <style>
+    #amorce {
+      --fond-amorce: #f4f6f3; --texte-amorce: #17201c;
+      position: fixed; inset: 0; z-index: 2147483000;
+      display: grid; place-items: center;
+      background: var(--fond-amorce);
+      transition: opacity 280ms ease;
+    }
+    @media (prefers-color-scheme: dark) { #amorce { --fond-amorce: #111512; --texte-amorce: #e6ece7; } }
+    #amorce[data-depart] { opacity: 0; pointer-events: none; }
+    /* Seul le logo est dans le flux : son centre EST le centre de l'écran, et
+       le titre, posé dessous en absolu, ne peut pas le décaler. */
+    .amorce-ancre { position: relative; width: 112px; height: 112px; }
+    .amorce-logo { width: 112px; height: 112px; display: block; border-radius: 26px;
+      box-shadow: 0 12px 32px rgba(19, 78, 66, .28); animation: amorce-entre 520ms cubic-bezier(.2, 1.3, .35, 1) both; }
+    .amorce-titre { margin: 0; position: absolute; top: calc(100% + 22px); left: 50%; transform: translateX(-50%);
+      white-space: nowrap; font: 700 1.35rem/1.2 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+      letter-spacing: -.01em; color: var(--texte-amorce); animation: amorce-titre 420ms ease-out 180ms both; }
+    @keyframes amorce-entre { from { opacity: 0; transform: scale(.82); } }
+    @keyframes amorce-titre { from { opacity: 0; transform: translate(-50%, 6px); } }
+    @media (prefers-reduced-motion: reduce) { .amorce-logo, .amorce-titre { animation: none; } }
+  </style>
 </head>
 <body>
+  <div id="amorce" role="status" aria-label="Chargement de Mes copropriétés">
+    <div class="amorce-ancre">
+      <svg class="amorce-logo" viewBox="0 0 64 64" aria-hidden="true">
+        <defs><linearGradient id="amorce-g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#134e42"/><stop offset="1" stop-color="#2c8d76"/></linearGradient></defs>
+        <rect width="64" height="64" rx="15" fill="url(#amorce-g)"/>
+        <path d="M13 29.5 32 15l19 14.5" fill="none" stroke="#fff" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M18 27v20.5h28V27" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+        <rect x="23" y="39" width="5" height="6" rx="1.5" fill="#b9f3e2"/>
+        <rect x="29.5" y="35" width="5" height="10" rx="1.5" fill="#b9f3e2"/>
+        <rect x="36" y="31" width="5" height="14" rx="1.5" fill="#ffe9a8"/>
+      </svg>
+      <p class="amorce-titre" aria-hidden="true">Mes copropriétés</p>
+    </div>
+  </div>
+  <script>
+    // Le contrôleur de l'écran d'amorçage. En ligne et sans module : il doit
+    // tourner avant le bundle, qui peut mettre plusieurs secondes à arriver.
+    (function () {
+      var amorce = document.getElementById('amorce');
+      if (!amorce) return;
+      var DUREE_MIN = 1500, FILET = 10000, FONDU = 280;
+      var etat = 'visible', attente = false;
+      // La durée minimale part du moment où l'écran est PEINT, pas de celui
+      // où ce script s'exécute (le premier rendu attend les styles du head).
+      var peint = performance.now();
+      requestAnimationFrame(function () { if (etat === 'visible' && !attente) peint = performance.now(); });
+      var filet = setTimeout(function () { retirer(); }, FILET);
+      function retirer() {
+        if (etat !== 'visible' || attente) return;
+        var reste = DUREE_MIN - (performance.now() - peint);
+        if (reste > 0) { attente = true; setTimeout(function () { attente = false; retirer(); }, reste); return; }
+        etat = 'sortie';
+        clearTimeout(filet);
+        amorce.setAttribute('data-depart', '');
+        amorce.setAttribute('aria-hidden', 'true');
+        amorce.removeAttribute('role');
+        amorce.addEventListener('transitionend', fini, { once: true });
+        setTimeout(fini, FONDU + 150);
+      }
+      function fini() {
+        if (etat === 'retiré') return;
+        etat = 'retiré';
+        amorce.remove();
+        window.dispatchEvent(new Event('amorce:retiree'));
+      }
+      window.__amorce = { pret: retirer, estRetiree: function () { return etat === 'retiré'; } };
+    })();
+  </script>
   <div id="root"></div>
   <script type="module" src="/src/main.jsx"></script>
 </body>

@@ -110,7 +110,7 @@ export default function Revenus() {
   return (
     <>
       <div className="entete">
-        <div><h1>Revenus</h1><p className="discret">Les loyers de chaque logement</p></div>
+        <div><p className="discret">Les loyers de chaque logement</p></div>
         <button className="bouton" onClick={() => setOuvert(null)}><Icone nom="plus" taille={18} />Logement</button>
       </div>
 

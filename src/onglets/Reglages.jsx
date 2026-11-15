@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 import { useSession, messageErreur } from '../donnees/Session';
 import { PAIES, totalProportions } from '../calc/budget';
 import { TYPES, empechement, actives, activer, desactiver } from '../donnees/notifications';
@@ -220,12 +220,10 @@ function ConnexionGoogle() {
   );
 }
 
-function Compte() {
-  const { copro, user, estGestionnaire, actions } = useSession();
+function Profil() {
+  const { copro, user, actions } = useSession();
   const toast = useToast();
   const [nom, setNom] = useState(copro.members[user.uid].displayName);
-  const [nomCopro, setNomCopro] = useState(copro.nom);
-  const autres = copro.memberUids.filter((u) => u !== user.uid);
 
   const renommer = (e) => {
     e.preventDefault();
@@ -236,6 +234,36 @@ function Compte() {
     actions.majProfil({ nom: propre });
     toast('Nom enregistré.');
   };
+
+  return (
+    <section className="carte">
+      <header><h2>Mon profil</h2></header>
+      <form className="champ" style={{ gap: 8 }} onSubmit={renommer}>
+        <Champ libelle="Mon nom"><input value={nom} onChange={(e) => setNom(e.target.value)} maxLength={40} required /></Champ>
+        {nom.trim() !== copro.members[user.uid].displayName ? <button className="bouton doux">Enregistrer le nom</button> : null}
+      </form>
+      <p className="discret">Connecté : {user.email}</p>
+      <ConnexionGoogle />
+      {/* Une adresse non vérifiée n'empêche rien ; mais si elle est fausse,
+          « mot de passe oublié » et le résumé mensuel n'arriveront jamais. */}
+      {!user.emailVerified && user.providerData.some((p) => p.providerId === 'password') ? (
+        <Avis ton="attention">Votre adresse n'est pas encore vérifiée.{' '}
+          <button className="bouton texte" onClick={async () => {
+            try { await actions.renvoyerVerification(); toast('Courriel de vérification envoyé.'); } catch (e) { toast(messageErreur(e)); }
+          }}>Renvoyer le courriel</button>
+        </Avis>
+      ) : null}
+      <button className="bouton contour" onClick={actions.deconnexion}>Se déconnecter</button>
+    </section>
+  );
+}
+
+function CetteCopro() {
+  const { copro, user, estGestionnaire, actions } = useSession();
+  const toast = useToast();
+  const [nomCopro, setNomCopro] = useState(copro.nom);
+  const autres = copro.memberUids.filter((u) => u !== user.uid);
+
   const renommerCopro = (e) => {
     e.preventDefault();
     if (!nomCopro.trim()) return;
@@ -258,32 +286,14 @@ function Compte() {
 
   return (
     <section className="carte">
-      <header><h2>Compte</h2></header>
-      <form className="champ" style={{ gap: 8 }} onSubmit={renommer}>
-        <Champ libelle="Mon nom"><input value={nom} onChange={(e) => setNom(e.target.value)} maxLength={40} required /></Champ>
-        {nom.trim() !== copro.members[user.uid].displayName ? <button className="bouton doux">Enregistrer le nom</button> : null}
-      </form>
+      <header><h2>Cette copropriété</h2></header>
       {estGestionnaire ? (
         <form className="champ" style={{ gap: 8 }} onSubmit={renommerCopro}>
           <Champ libelle="Nom de la copropriété"><input value={nomCopro} onChange={(e) => setNomCopro(e.target.value)} maxLength={60} required /></Champ>
           {nomCopro.trim() !== copro.nom ? <button className="bouton doux">Enregistrer le nom</button> : null}
         </form>
-      ) : null}
-      <p className="discret">Connecté : {user.email}</p>
-      <ConnexionGoogle />
-      {/* Une adresse non vérifiée n'empêche rien ; mais si elle est fausse,
-          « mot de passe oublié » et le résumé mensuel n'arriveront jamais. */}
-      {!user.emailVerified && user.providerData.some((p) => p.providerId === 'password') ? (
-        <Avis ton="attention">Votre adresse n'est pas encore vérifiée.{' '}
-          <button className="bouton texte" onClick={async () => {
-            try { await actions.renvoyerVerification(); toast('Courriel de vérification envoyé.'); } catch (e) { toast(messageErreur(e)); }
-          }}>Renvoyer le courriel</button>
-        </Avis>
-      ) : null}
-      <div className="boutons">
-        <button className="bouton contour" onClick={actions.deconnexion}>Se déconnecter</button>
-        <button className="bouton danger" onClick={quitter}>Quitter la copropriété</button>
-      </div>
+      ) : <p className="discret">{copro.nom}</p>}
+      <button className="bouton danger" onClick={quitter}>Quitter la copropriété</button>
     </section>
   );
 }
@@ -321,15 +331,46 @@ function APropos() {
   );
 }
 
-export default function Reglages() {
+// Comme Budget Maison : une page par sujet plutôt qu'une longue colonne de
+// cartes, où « Quitter » finissait sous « Notifications ».
+const SECTIONS = [
+  { cle: 'profil', nom: 'Profil', Contenu: Profil },
+  { cle: 'copropriete', nom: 'Copropriété', Contenu: () => <><Coproprietaires /><Inviter /><CetteCopro /></> },
+  { cle: 'notifications', nom: 'Notifications', Contenu: Notifications },
+  { cle: 'apropos', nom: 'À propos', Contenu: APropos },
+];
+
+export default function Reglages({ sousOnglet }) {
+  const [cle, setCle] = useState(() => (SECTIONS.some((s) => s.cle === sousOnglet) ? sousOnglet : 'profil'));
+  const rang = SECTIONS.findIndex((s) => s.cle === cle);
+  // Le sens de l'arrivée suit celui du geste : vers la droite, la page vient de la droite.
+  const [sens, setSens] = useState(1);
+  const { Contenu } = SECTIONS[rang];
+  const choisir = (c) => { setSens(SECTIONS.findIndex((s) => s.cle === c) >= rang ? 1 : -1); setCle(c); };
+  // Chaque onglet a la largeur de son mot : à parts égales, « Notifications »
+  // était coupé à 390 px. La pilule mesure donc l'onglet choisi.
+  const barre = useRef(null);
+  const [pilule, setPilule] = useState(null);
+  useLayoutEffect(() => {
+    const mesurer = () => {
+      const b = barre.current?.querySelectorAll('[role="tab"]')[rang];
+      if (b) setPilule({ x: b.offsetLeft, l: b.offsetWidth });
+    };
+    mesurer();
+    window.addEventListener('resize', mesurer);
+    return () => window.removeEventListener('resize', mesurer);
+  }, [rang]);
   return (
     <>
-      <div className="entete"><div><h1>Réglages</h1></div></div>
-      <Coproprietaires />
-      <Inviter />
-      <Notifications />
-      <Compte />
-      <APropos />
+      <div className="sous-onglets" ref={barre} role="tablist" aria-label="Sections des réglages">
+        {pilule ? <span className="sous-glisseur" style={{ width: pilule.l, transform: `translateX(${pilule.x}px)` }} aria-hidden="true" /> : null}
+        {SECTIONS.map((s) => (
+          <button key={s.cle} type="button" role="tab" aria-selected={s.cle === cle} onClick={() => choisir(s.cle)}>{s.nom}</button>
+        ))}
+      </div>
+      <div className="section-reglages" key={cle} role="tabpanel" style={{ '--sens': sens }}>
+        <Contenu />
+      </div>
     </>
   );
 }

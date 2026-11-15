@@ -27,11 +27,10 @@ export default function Apercu({ allerA }) {
     <>
       <div className="entete">
         {/* La copropriété est nommée dans la barre titre ; la répéter ici
-            faisait doublon (remarqué sur téléphone). Sous le titre, ses
+            faisait doublon (remarqué sur téléphone). Ici, le mois et ses
             logements, chacun avec son loyer du mois. */}
         <div>
-          <h1>Aperçu</h1>
-          <p className="discret">{libelleMois(mois)}</p>
+          <p className="mois-apercu">{libelleMois(mois)}</p>
           {copro.logements.length ? (
             <ul className="logements-apercu">
               {copro.logements.map((l) => {

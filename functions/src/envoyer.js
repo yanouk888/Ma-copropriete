@@ -18,6 +18,11 @@ export async function notifier(uid, { type, title, body }) {
     const db = getFirestore();
     const profil = (await db.collection('users').doc(uid).get()).data();
     if (!profil || profil.notifications?.[type] === false) return;
+    // L'historique de la cloche s'écrit avant l'envoi, et même sans appareil
+    // inscrit : celui qui a refusé les notifications poussées les retrouve
+    // en ouvrant l'application.
+    await db.collection('users').doc(uid).collection('notifications')
+      .add({ type: String(type), title: String(title), body: String(body), read: false, createdAt: FieldValue.serverTimestamp() });
     const jetons = (profil.fcmTokens || []).filter(Boolean);
     if (!jetons.length) return;
 

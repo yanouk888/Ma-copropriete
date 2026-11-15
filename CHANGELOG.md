@@ -1,5 +1,20 @@
 # Journal des versions
 
+## 1.6.0 — 15 novembre 2026
+
+- **Un écran d'accueil** à l'ouverture, avec le logo, le temps que vos
+  copropriétés se chargent.
+- **La barre du haut dit où vous êtes** : le titre de la page, et juste
+  dessous le nom de la copropriété ouverte — touchez-le pour en changer.
+- **Une cloche** à droite garde l'historique de vos notifications, avec le
+  nombre de non lues, même si les notifications sont coupées sur l'appareil.
+- **Votre avatar** (votre photo Google, ou vos initiales) ouvre un menu :
+  votre profil, les copropriétaires, les notifications, la déconnexion.
+- **La barre du bas** garde Aperçu, Revenus, Dépenses et Suivi ; Planifier et
+  Réglages sont sous « Plus ».
+- **Les Réglages ont quatre onglets** : Profil, Copropriété, Notifications
+  et À propos.
+
 ## 1.5.1 — 15 novembre 2026
 
 - **L'application se met à jour toute seule**, comme Budget Maison : à
