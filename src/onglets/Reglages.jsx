@@ -170,6 +170,39 @@ function Notifications() {
   );
 }
 
+/**
+ * Les façons de se connecter à ce compte. Lier Google permet ensuite d'entrer
+ * d'un toucher, sans mot de passe, et retrouver les mêmes copropriétés.
+ */
+function ConnexionGoogle() {
+  const { user, actions } = useSession();
+  const toast = useToast();
+  const [occupe, setOccupe] = useState(false);
+  const google = user.providerData.find((p) => p.providerId === 'google.com');
+  const motDePasse = user.providerData.some((p) => p.providerId === 'password');
+  const lancer = async (geste) => {
+    setOccupe(true);
+    // Pas de « finally » qui remettrait occupe à faux : en cas de réussite, la
+    // page se recharge, et le bouton doit rester inactif jusque-là.
+    try { await geste(); } catch (e) { toast(messageErreur(e)); setOccupe(false); }
+  };
+  return (
+    <div className="ligne" style={{ alignItems: 'center', flexWrap: 'wrap' }}>
+      <span>
+        <strong>Google</strong><br />
+        <small className="discret">{google ? `Lié : ${google.email}` : 'Non lié'}</small>
+      </span>
+      {!google ? (
+        <button type="button" className="bouton contour" disabled={occupe} onClick={() => lancer(actions.lierGoogle)}>Lier mon compte Google</button>
+      ) : motDePasse ? (
+        // Sans mot de passe, Google est la seule porte d'entrée : on ne la ferme pas.
+        <button type="button" className="bouton texte" disabled={occupe}
+          onClick={() => { if (window.confirm('Dissocier Google ? Vous vous connecterez ensuite avec votre courriel et votre mot de passe.')) lancer(actions.dissocierGoogle); }}>Dissocier</button>
+      ) : null}
+    </div>
+  );
+}
+
 function Compte() {
   const { copro, user, estGestionnaire, actions } = useSession();
   const toast = useToast();
@@ -220,6 +253,7 @@ function Compte() {
         </form>
       ) : null}
       <p className="discret">Connecté : {user.email}</p>
+      <ConnexionGoogle />
       {/* Une adresse non vérifiée n'empêche rien ; mais si elle est fausse,
           « mot de passe oublié » et le résumé mensuel n'arriveront jamais. */}
       {!user.emailVerified && user.providerData.some((p) => p.providerId === 'password') ? (

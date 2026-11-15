@@ -3,6 +3,8 @@ import { configure } from './firebase';
 import { SessionProvider, useSession } from './donnees/Session';
 import { Icone, Toasts, useToast } from './composants/ui';
 import Connexion from './pages/Connexion';
+import Logo from './composants/Logo';
+import { PastilleCopro } from './composants/MesCopros';
 import Bienvenue from './pages/Bienvenue';
 import Apercu from './onglets/Apercu';
 import Revenus from './onglets/Revenus';
@@ -65,6 +67,15 @@ function Coquille() {
           <button type="button" className="bouton texte" onClick={() => window.location.reload()}>Mettre à jour</button>
         </div>
       ) : null}
+      {/* La barre titre reste en haut à tous les écrans : la marque, et la
+          copropriété ouverte — sur Revenus ou Dépenses, rien d'autre ne
+          disait de laquelle il s'agit. */}
+      <header className="barre-titre">
+        <div className="barre-titre-contenu">
+          <span className="marque-app"><Logo taille={30} /><span>Ma copropriété</span></span>
+          <PastilleCopro />
+        </div>
+      </header>
       {/* La clé remonte l'écran à chaque changement d'onglet : c'est ce qui rejoue l'arrivée des cartes. */}
       <main className="page" key={onglet}><Ecran allerA={setOnglet} /></main>
       <div className="barre">

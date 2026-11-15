@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useSession, messageErreur } from '../donnees/Session';
 import { Champ, Segments, Avis, useToast } from '../composants/ui';
+import Logo from '../composants/Logo';
 
 export default function Connexion() {
   const { actions } = useSession();
@@ -40,10 +41,10 @@ export default function Connexion() {
     <div className="centre">
       <form className="carte" onSubmit={soumettre}>
         <div className="vitrine">
-          <h1>Ma copropriété</h1>
+          <div className="marque-app"><Logo taille={44} /><h1>Ma copropriété</h1></div>
           <p>Le budget d'une copropriété locative, à plusieurs.</p>
           {/* Trois immeubles qui se bâtissent, puis leurs fenêtres qui s'allument : purement décoratif. */}
-          <svg viewBox="0 0 320 110" aria-hidden="true">
+          <svg className="illustration" viewBox="0 0 320 110" aria-hidden="true">
             <rect className="immeuble" x="18" y="46" width="78" height="64" rx="4" />
             <rect className="immeuble" x="110" y="14" width="96" height="96" rx="4" />
             <rect className="immeuble" x="220" y="38" width="82" height="72" rx="4" />
