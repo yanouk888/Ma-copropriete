@@ -4,7 +4,8 @@ import { Champ, Avis } from '../composants/ui';
 
 /** Premier écran après la connexion : on n'a pas encore de copropriété. */
 export default function Bienvenue() {
-  const { user, actions } = useSession();
+  const { user, profil, actions } = useSession();
+  const prenom = profil?.nom || user.displayName;
   const [nom, setNom] = useState('');
   const [code, setCode] = useState('');
   const [erreur, setErreur] = useState('');
@@ -26,7 +27,7 @@ export default function Bienvenue() {
     <div className="centre">
       <div className="carte">
         <div>
-          <h1>Bonjour{user.displayName ? `, ${user.displayName}` : ''}</h1>
+          <h1>Bonjour{prenom ? `, ${prenom}` : ''}</h1>
           <p className="discret">Rejoignez une copropriété existante, ou créez la vôtre.</p>
         </div>
         {erreur ? <Avis ton="alerte">{erreur}</Avis> : null}

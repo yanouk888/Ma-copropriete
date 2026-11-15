@@ -4,6 +4,8 @@ import { loyerDuMois, montantEnVigueur, poserPalier, revenusDuMois } from '../ca
 import { moisDe, libelleMois, ajouterMois } from '../calc/mois';
 import { dollars } from '../donnees/format';
 import { nouvelId } from '../donnees/code';
+import { Nombre, Occupation } from '../composants/graphiques';
+import { suiteMois } from '../calc/mois';
 import { Feuille, Champ, ChampMontant, ChampMois, Bascule, Icone, Vide, montantValide } from '../composants/ui';
 
 function FeuilleLogement({ logement, onFermer }) {
@@ -108,19 +110,26 @@ export default function Revenus() {
       </div>
 
       <section className="carte">
-        <div className="ligne total"><span>Loyers de {libelleMois(mois)}</span><span className="chiffre bon">{dollars(revenusDuMois(copro, mois))}</span></div>
+        <span className="discret">Loyers de {libelleMois(mois)}</span>
+        <Nombre valeur={revenusDuMois(copro, mois)} className="total-geant" />
+        {copro.logements.length ? (
+          <p className="discret">{copro.logements.filter((l) => loyerDuMois(l, mois) > 0).length} logement(s) loué(s) sur {copro.logements.length} · {dollars(suiteMois(mois, 12).reduce((s, m) => s + revenusDuMois(copro, m), 0))} prévus sur 12 mois</p>
+        ) : null}
       </section>
 
       <section className="carte">
         {copro.logements.length ? (
           <div className="liste">
-            {copro.logements.map((l) => {
+            {copro.logements.map((l, i) => {
               const loyer = loyerDuMois(l, mois);
               const hausse = prochain(l);
               const vacant = (l.vacances || []).includes(mois);
               const ferme = l.fin && mois > l.fin;
               return (
-                <button className="element" key={l.id} onClick={() => setOuvert(l)}>
+                <button className="element" key={l.id} style={{ '--i': i }} onClick={() => setOuvert(l)}>
+                  <span className="tuile loyer" aria-hidden="true">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M4 20V9l8-5 8 5v11M9 20v-6h6v6" /></svg>
+                  </span>
                   <div className="corps">
                     <strong>{l.nom}</strong>
                     <span className="discret">
@@ -130,6 +139,11 @@ export default function Revenus() {
                         : montantEnVigueur(l.paliers, mois) === null ? `Loué à partir de ${libelleMois(l.paliers[0].depuis)}`
                         : 'Loué'}
                     </span>
+                    {/* Les 13 mois qui viennent : loué, vacant, ou pas loué. */}
+                    <Occupation etats={suiteMois(mois, 13).map((m) => ({
+                      mois: m,
+                      etat: (l.vacances || []).includes(m) ? 'vacant' : loyerDuMois(l, m) > 0 ? 'loue' : 'ferme',
+                    }))} />
                   </div>
                   <div className="droite"><strong className="chiffre">{dollars(loyer)}</strong><span className="discret">par mois</span></div>
                   <Icone nom="chevron" taille={18} />

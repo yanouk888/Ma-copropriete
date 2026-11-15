@@ -36,12 +36,20 @@ export default function Connexion() {
   return (
     <div className="centre">
       <form className="carte" onSubmit={soumettre}>
-        <div className="marque">
-          <img src="/favicon.svg" alt="" />
-          <div>
-            <h1>Ma copropriété</h1>
-            <p className="discret">Le budget d'une copropriété locative, à plusieurs.</p>
-          </div>
+        <div className="vitrine">
+          <h1>Ma copropriété</h1>
+          <p>Le budget d'une copropriété locative, à plusieurs.</p>
+          {/* Trois immeubles qui se bâtissent, puis leurs fenêtres qui s'allument : purement décoratif. */}
+          <svg viewBox="0 0 320 110" aria-hidden="true">
+            <rect className="immeuble" x="18" y="46" width="78" height="64" rx="4" />
+            <rect className="immeuble" x="110" y="14" width="96" height="96" rx="4" />
+            <rect className="immeuble" x="220" y="38" width="82" height="72" rx="4" />
+            {[[30, 58], [52, 58], [74, 58], [30, 80], [74, 80],
+              [124, 28], [148, 28], [172, 28], [124, 52], [172, 52], [124, 76], [148, 76],
+              [234, 50], [258, 50], [282, 50], [234, 74], [282, 74]].map(([x, y], i) => (
+              <rect key={i} className="fenetre" x={x} y={y} width="12" height="14" rx="2" style={{ '--i': i }} />
+            ))}
+          </svg>
         </div>
         <Segments libelle="Connexion ou inscription" valeur={mode} onChange={(m) => { setMode(m); setErreur(''); }}
           options={[{ valeur: 'connexion', libelle: 'Se connecter' }, { valeur: 'inscription', libelle: 'Créer un compte' }]} />

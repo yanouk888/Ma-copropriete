@@ -7,6 +7,7 @@ import {
 import { moisDe, libelleMois, ajouterMois, ecartMois } from '../calc/mois';
 import { dollars } from '../donnees/format';
 import { nouvelId } from '../donnees/code';
+import { Nombre, Repartition, TuilePoste, postesDuMois, posteDe } from '../composants/graphiques';
 import { Feuille, Champ, ChampMontant, ChampMois, Segments, Bascule, Icone, Vide, Avis, montantValide } from '../composants/ui';
 
 const enTexte = (n) => (n === '' || n === null || n === undefined ? '' : String(n).replace('.', ','));
@@ -218,7 +219,9 @@ export default function Depenses() {
       </div>
 
       <section className="carte">
-        <div className="ligne total"><span>Fonds de roulement, par mois</span><span className="chiffre">{dollars(resume.sorties)}</span></div>
+        <span className="discret">Fonds de roulement, par mois</span>
+        <Nombre valeur={resume.sorties} className="total-geant" />
+        <Repartition postes={postesDuMois(copro, mois, resume.hypotheque)} />
         <p className="discret">Ce qu'il faut chaque mois pour tout payer, les dépenses annuelles et amorties ramenées au mois.</p>
       </section>
 
@@ -229,9 +232,16 @@ export default function Depenses() {
         </header>
         {h && ligne ? (
           <div>
-            <div className="ligne"><span>Paiement, ramené au mois</span><span className="chiffre">{dollars(mensualiteHypotheque(h))}</span></div>
-            <div className="ligne"><span className="discret">dont intérêts</span><span className="chiffre discret">{dollars(ligne.interet)}</span></div>
-            <div className="ligne"><span className="discret">dont capital remboursé</span><span className="chiffre discret">{dollars(ligne.capital)}</span></div>
+            <div className="element" style={{ cursor: 'default', paddingTop: 0 }}>
+              <TuilePoste poste="Hypothèque" />
+              <div className="corps"><strong>Paiement, ramené au mois</strong><span className="discret">Taux de {String(h.taux).replace('.', ',')} %</span></div>
+              <strong><Nombre valeur={mensualiteHypotheque(h)} /></strong>
+            </div>
+            {/* Deux chiffres, pas un graphique : à deux parts, le nombre dit tout. */}
+            <div className="duo" style={{ marginBottom: 12 }}>
+              <div className="stat"><span>Intérêts ce mois-ci</span><strong><Nombre valeur={ligne.interet} /></strong></div>
+              <div className="stat"><span>Capital remboursé</span><strong><Nombre valeur={ligne.capital} /></strong></div>
+            </div>
             <div className="ligne"><span>Solde à la fin de {libelleMois(mois)}</span><span className="chiffre">{dollars(ligne.solde)}</span></div>
             {h.renouvellement ? <div className="ligne"><span>Renouvellement</span><span className="chiffre">{new Date(`${h.renouvellement}T12:00:00`).toLocaleDateString('fr-CA', { day: 'numeric', month: 'long', year: 'numeric' })}</span></div> : null}
           </div>
@@ -242,8 +252,9 @@ export default function Depenses() {
         <header><h2>Récurrentes</h2></header>
         {recurrentes.length ? (
           <div className="liste">
-            {recurrentes.map((d) => (
-              <button className="element" key={d.id} onClick={() => setOuverte(d)}>
+            {recurrentes.map((d, i) => (
+              <button className="element" key={d.id} style={{ '--i': i }} onClick={() => setOuverte(d)}>
+                <TuilePoste poste={posteDe(d.categorie)} />
                 <div className="corps"><strong>{d.nom}</strong><span className="discret">{sousTitre(d)}</span></div>
                 <div className="droite"><strong className="chiffre">{dollars(mensualiteDepense(d, mois))}</strong><span className="discret">par mois</span></div>
                 <Icone nom="chevron" taille={18} />
@@ -260,8 +271,9 @@ export default function Depenses() {
         <section className="carte">
           <header><h2>Ponctuelles</h2></header>
           <div className="liste">
-            {ponctuelles.map((d) => (
-              <button className="element" key={d.id} onClick={() => setOuverte(d)}>
+            {ponctuelles.map((d, i) => (
+              <button className="element" key={d.id} style={{ '--i': i }} onClick={() => setOuverte(d)}>
+                <TuilePoste poste={posteDe(d.categorie)} />
                 <div className="corps">
                   <strong>{d.nom}</strong>
                   <span className="discret">{dollars(d.montant)} en {libelleMois(d.mois)} · {d.amortie ? `amortie jusqu'en ${libelleMois(ajouterMois(d.amortDebut, 11), { court: true })}` : 'payée à même le compte'}</span>

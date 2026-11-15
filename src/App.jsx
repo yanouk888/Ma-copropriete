@@ -58,9 +58,11 @@ function Coquille() {
           <button type="button" className="bouton texte" onClick={() => window.location.reload()}>Mettre à jour</button>
         </div>
       ) : null}
-      <main className="page"><Ecran allerA={setOnglet} /></main>
+      {/* La clé remonte l'écran à chaque changement d'onglet : c'est ce qui rejoue l'arrivée des cartes. */}
+      <main className="page" key={onglet}><Ecran allerA={setOnglet} /></main>
       <div className="barre">
         <nav aria-label="Sections">
+          <span className="glisseur" style={{ '--position': ONGLETS.findIndex((o) => o.cle === onglet) }} aria-hidden="true" />
           {ONGLETS.map((o) => (
             <button key={o.cle} type="button" aria-current={o.cle === onglet ? 'page' : undefined} onClick={() => setOnglet(o.cle)}>
               <span className="pastille"><Icone nom={o.cle} /></span>

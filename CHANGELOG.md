@@ -1,5 +1,29 @@
 # Journal des versions
 
+## 1.1.0 — 15 novembre 2026
+
+L'application devient visuelle, et elle bouge.
+
+- **Un anneau d'autosuffisance** ouvre l'aperçu, sur une carte en couleur qui
+  passe au vert quand la copropriété se paie toute seule.
+- **Une courbe vers l'autosuffisance** montre le taux mois par mois sur 13
+  mois, face à la ligne des 100 %. Glissez le doigt dessus pour lire un mois.
+- **Où va l'argent** : sous Dépenses, une barre colorée répartit le fonds de
+  roulement entre l'hypothèque, les frais de condo, les taxes et le reste.
+  Chaque poste garde sa couleur et son icône partout.
+- **Loyers contre sorties**, côte à côte sur la même échelle, dans l'aperçu
+  et pour chaque mois de la planification.
+- **Chaque logement montre ses 13 prochains mois** d'un coup d'œil : loué,
+  vacant ou pas loué.
+- **Les copropriétaires ont leur couleur**, et une barre montre le partage.
+- **Du mouvement** : les cartes arrivent l'une après l'autre, les montants
+  roulent jusqu'à leur valeur, les graphiques se dessinent, les fenêtres
+  montent en ressort et repartent, la pilule de la barre du bas glisse. Avec
+  « Réduire les animations » activé sur l'appareil, tout cela devient un
+  fondu bref.
+- **Corrigé** : il arrivait qu'on soit renvoyé à l'écran d'accueil juste après
+  avoir créé ou rejoint une copropriété.
+
 ## 1.0.0 — 15 novembre 2026
 
 Première version de Ma copropriété : le budget d'une copropriété achetée pour

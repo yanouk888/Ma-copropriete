@@ -24,6 +24,11 @@ si elle est nécessaire.
   Un calcul ne s'écrit jamais ailleurs.
 - `src/donnees/Session.jsx` — connexion, copropriété courante, écritures.
 - `src/onglets/` — les cinq écrans. `src/composants/ui.jsx` — les briques.
+- `src/composants/graphiques.jsx` — les graphiques et les montants qui
+  roulent, dessinés à la main (aucune bibliothèque). Les teintes des séries
+  (`--serie-N` dans `styles.css`) ont été validées pour le daltonisme et le
+  contraste, en clair et en sombre : ne pas en changer l'ordre ni en ajouter
+  une huitième à l'œil.
 - `firestore.rules` — le seul rempart entre les finances d'une copropriété et
   n'importe quel compte.
 - `functions/` — les notifications poussées.
@@ -94,6 +99,13 @@ dépôts se lisent de la même façon : `memberUids`, `members`, `displayName`.
 - **Le dos Firebase** : `.github/workflows/firebase.yml` déploie les règles et
   les fonctions quand `functions/`, `src/calc/`, `firestore.rules` ou
   `firebase.json` changent.
+
+**Ne jamais appeler `updateProfile` (ni rien qui change le compte Firebase
+Auth) pendant qu'on est connecté** : le compte émet un nouveau jeton,
+Firestore relance toutes ses connexions, et une fois sur cinq ses écoutes
+restaient figées — on était renvoyé à l'écran d'accueil après avoir créé ou
+rejoint une copropriété. Le prénom vit dans `users/{uid}.nom`. Trouvé à la
+1.1.0, après beaucoup d'essais ; voir `Session.jsx`.
 
 Le service worker (`public/sw.js`) ne charge **pas** le SDK Firebase et ne met
 rien en cache : il lit l'événement `push` directement. Ne pas y ramener

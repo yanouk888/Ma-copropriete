@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { updateProfile } from 'firebase/auth';
 import { useSession, messageErreur } from '../donnees/Session';
 import { PAIES, totalProportions } from '../calc/budget';
 import { TYPES, empechement, actives, activer, desactiver } from '../donnees/notifications';
@@ -156,12 +155,13 @@ function Compte() {
   const [nomCopro, setNomCopro] = useState(copro.nom);
   const autres = copro.memberUids.filter((u) => u !== user.uid);
 
-  const renommer = async (e) => {
+  const renommer = (e) => {
     e.preventDefault();
     const propre = nom.trim();
     if (!propre) return;
     actions.modifier(copro.id, { [`members.${user.uid}.displayName`]: propre });
-    try { await updateProfile(user, { displayName: propre }); } catch { /* le nom dans la copropriété est celui qui compte */ }
+    // Dans le profil Firestore, pas dans le compte : voir Session.jsx (inscription).
+    actions.majProfil({ nom: propre });
     toast('Nom enregistré.');
   };
   const renommerCopro = (e) => {

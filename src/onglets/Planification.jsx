@@ -4,6 +4,7 @@ import { planifier, premierMoisNegatif } from '../calc/budget';
 import { moisDe, libelleMois, ajouterMois } from '../calc/mois';
 import { dollars } from '../donnees/format';
 import { nouvelId } from '../donnees/code';
+import { Nombre, EntreesSorties } from '../composants/graphiques';
 import { Feuille, Champ, ChampMontant, ChampMois, Segments, Icone, Avis, montantValide } from '../composants/ui';
 import { lireMontant } from '../donnees/format';
 
@@ -87,12 +88,12 @@ function Barres({ plan, choisi, onChoisir }) {
   const zero = (max / etendue) * 100;
   return (
     <div className="barres" role="group" aria-label="Solde projeté à la fin de chaque mois">
-      {plan.map((l) => {
+      {plan.map((l, i) => {
         const hauteur = (Math.abs(l.soldeFin) / etendue) * 100;
         return (
           <button key={l.mois} type="button" className="colonne" onClick={() => onChoisir(l.mois)}
             aria-pressed={choisi === l.mois} aria-label={`${libelleMois(l.mois)} : ${dollars(l.soldeFin)}`}
-            style={{ background: 'none', border: 0, padding: 0, cursor: 'pointer', opacity: choisi && choisi !== l.mois ? 0.45 : 1 }}>
+            style={{ background: 'none', border: 0, padding: 0, cursor: 'pointer', opacity: choisi && choisi !== l.mois ? 0.45 : 1, '--i': i }}>
             <span className="zone">
               <span className="zero" style={{ top: `${zero}%` }} />
               <span className={`barre-solde${l.soldeFin < 0 ? ' negatif' : ''}`}
@@ -140,6 +141,12 @@ export default function Planification() {
 
       <section className="carte" aria-live="polite">
         <header><h2>{libelleMois(ligne.mois)}</h2></header>
+        <div>
+          <span className="discret">Solde à la fin du mois</span><br />
+          <Nombre valeur={ligne.soldeFin} className={`total-geant ${ligne.soldeFin < 0 ? 'mauvais' : ''}`} />
+        </div>
+        <EntreesSorties nomEntrees="Entrées" entrees={ligne.revenus + ligne.versements + Math.max(0, ligne.totalAjustements)}
+          sorties={ligne.depenses + ligne.hypotheque + Math.max(0, -ligne.totalAjustements)} />
         <div>
           <div className="ligne"><span>Solde au début</span><span className="chiffre">{dollars(ligne.soldeDebut)}</span></div>
           <div className="ligne"><span>Loyers</span><span className="chiffre bon">+ {dollars(ligne.revenus)}</span></div>

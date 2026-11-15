@@ -80,6 +80,8 @@ button, input, select { font: inherit; color: inherit; }
 
 .entete { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 4px 2px; }
 .entete > div { min-width: 0; }
+/* Le bouton d'en-tête garde sa largeur : c'est le sous-titre qui passe à la ligne, pas « Logement » qui se coupe en deux. */
+.entete .bouton { flex: none; white-space: nowrap; }
 
 .barre {
   position: fixed; inset: auto 0 0 0; z-index: 5;
@@ -214,17 +216,7 @@ dialog.feuille::backdrop { background: rgba(0, 0, 0, .45); }
 .feuille .pied { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; padding-top: 4px; }
 .feuille .pied .gauche { margin-right: auto; }
 
-/* ───────── Aperçu ───────── */
-
-.jauge { display: grid; grid-template-columns: auto 1fr; gap: 16px; align-items: center; }
-.jauge svg { width: 132px; height: 132px; }
-.jauge .piste { stroke: var(--surface-2); }
-.jauge .arc { stroke: var(--primaire); transition: stroke-dashoffset .6s ease-out; }
-.jauge .arc.atteint { stroke: var(--bon); }
-.jauge text { fill: var(--texte); font-weight: 700; font-size: 26px; }
-.jauge .texte { display: grid; gap: 4px; min-width: 0; }
-.jauge .gros { font-size: 1.35rem; font-weight: 700; line-height: 1.2; }
-@media (max-width: 380px) { .jauge svg { width: 104px; height: 104px; } .jauge { gap: 12px; } }
+/* ───────── Graphiques simples ───────── */
 
 .barres { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 3px; align-items: end; height: 120px; }
 .barres .colonne { display: grid; grid-template-rows: 1fr auto; height: 100%; min-width: 0; gap: 4px; }
@@ -241,8 +233,6 @@ dialog.feuille::backdrop { background: rgba(0, 0, 0, .45); }
 
 .centre { min-height: 100dvh; display: grid; place-items: center; padding: 24px 16px; }
 .centre .carte { width: min(100%, 420px); gap: 16px; padding: 22px; }
-.marque { display: flex; align-items: center; gap: 12px; }
-.marque img { width: 44px; height: 44px; }
 .separateur { display: flex; align-items: center; gap: 10px; color: var(--texte-2); font-size: .85rem; }
 .separateur::before, .separateur::after { content: ''; flex: 1; height: 1px; background: var(--trait); }
 
@@ -260,3 +250,219 @@ details > summary { cursor: pointer; min-height: 44px; display: flex; align-item
 /* Un bouton dans un avis passe sous le texte : en ligne, sa hauteur de 44 px
    (la cible tactile) écartait les lignes du paragraphe autour de lui. */
 .avis .bouton.texte { display: flex; margin: 2px 0 -8px -10px; color: inherit; text-decoration: underline; }
+
+/* ═════════ Graphiques ═════════ */
+
+/* Les teintes des séries, dans l'ordre validé (daltonisme, contraste) pour la
+   surface claire puis pour la surface sombre : ce ne sont pas les mêmes pas. */
+:root {
+  --serie-1: #2a78d6; --serie-2: #eb6834; --serie-3: #1baf7a; --serie-4: #eda100;
+  --serie-5: #e87ba4; --serie-6: #008300; --serie-7: #6250d6; --serie-autre: #8d9590;
+  --hero-a: #134e42; --hero-b: #2c8d76; --sur-hero: #ffffff; --hero-arc: #b9f3e2;
+  /* Le ressort : dépasse un peu, puis revient. */
+  --ressort: cubic-bezier(.2, 1.3, .35, 1);
+  --doux: cubic-bezier(.2, .8, .2, 1);
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --serie-1: #3987e5; --serie-2: #d95926; --serie-3: #199e70; --serie-4: #c98500;
+    --serie-5: #d55181; --serie-6: #0ca30c; --serie-7: #9085e9; --serie-autre: #7b847e;
+    --hero-a: #0f3a31; --hero-b: #1d6453; --sur-hero: #eafaf5; --hero-arc: #8fe3cb;
+  }
+}
+
+/* ───────── La carte d'en-tête de l'aperçu ───────── */
+
+.hero {
+  position: relative; overflow: hidden;
+  background: linear-gradient(135deg, var(--hero-a), var(--hero-b));
+  color: var(--sur-hero);
+  border-radius: 26px; padding: 20px;
+  display: grid; grid-template-columns: auto 1fr; gap: 18px; align-items: center;
+  box-shadow: 0 10px 30px -12px color-mix(in srgb, var(--hero-a) 70%, transparent);
+}
+/* Deux halos qui dérivent lentement : la carte respire sans rien bouger d'utile. */
+.hero::before, .hero::after {
+  content: ''; position: absolute; border-radius: 50%; pointer-events: none;
+  background: radial-gradient(circle, rgba(255, 255, 255, .16), transparent 65%);
+}
+.hero::before { width: 260px; height: 260px; right: -90px; top: -110px; animation: derive 14s ease-in-out infinite alternate; }
+.hero::after { width: 200px; height: 200px; left: -80px; bottom: -120px; animation: derive 18s ease-in-out infinite alternate-reverse; }
+@keyframes derive { to { transform: translate(-24px, 18px) scale(1.12); } }
+.hero > * { position: relative; z-index: 1; min-width: 0; }
+.hero .texte { display: grid; gap: 4px; }
+.hero .surtitre { font-size: .8rem; letter-spacing: .08em; text-transform: uppercase; opacity: .8; }
+.hero .gros { font-size: 1.5rem; font-weight: 750; line-height: 1.15; }
+.hero .sous { opacity: .85; font-size: .92rem; }
+.hero.atteint { --hero-a: #14603a; --hero-b: #3aa56a; }
+
+.jauge-anneau { width: 132px; height: 132px; display: block; }
+.jauge-anneau .piste { stroke: rgba(255, 255, 255, .2); }
+.jauge-anneau .arc { stroke: var(--hero-arc); transition: stroke-dashoffset .9s var(--doux); animation: trace 1.1s var(--doux) both; }
+@keyframes trace { from { stroke-dashoffset: var(--tour); } }
+.jauge-anneau text { fill: currentColor; font-weight: 750; font-size: 30px; font-variant-numeric: tabular-nums; }
+@media (max-width: 380px) { .jauge-anneau { width: 108px; height: 108px; } .hero { gap: 14px; padding: 18px 16px; } .hero .gros { font-size: 1.3rem; } }
+
+/* ───────── Entrées et sorties ───────── */
+
+.duel { display: grid; gap: 10px; }
+.duel .rang { display: grid; grid-template-columns: 58px 1fr auto; gap: 10px; align-items: center; }
+.duel .nom { color: var(--texte-2); font-size: .9rem; }
+.duel .voie { height: 18px; border-radius: 4px; background: var(--surface-2); overflow: hidden; }
+.duel .trait { display: block; height: 100%; border-radius: 0 4px 4px 0; transform-origin: left; animation: pousse .8s var(--doux) both; transition: width .6s var(--doux); }
+.duel .trait.entree { background: var(--serie-3); }
+.duel .trait.sortie { background: var(--serie-autre); animation-delay: .12s; }
+@keyframes pousse { from { transform: scaleX(0); } }
+
+/* ───────── Répartition des sorties ───────── */
+
+.repartition { display: grid; gap: 12px; }
+/* L'écart de 2 px entre les parts est ce qui les sépare : jamais un contour. */
+.barre-parts { display: flex; gap: 2px; height: 22px; border-radius: 6px; overflow: hidden; animation: devoile .9s var(--doux) both; }
+.barre-parts span { min-width: 5px; flex-basis: 0; transition: opacity .2s, flex-grow .6s var(--doux); cursor: pointer; }
+@keyframes devoile { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0); } }
+.legende { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.legende li { display: grid; grid-template-columns: auto 1fr auto auto; gap: 10px; align-items: center; min-height: 36px; padding: 0 4px; border-radius: 8px; transition: opacity .2s, background .2s; cursor: pointer; }
+.legende li:hover { background: var(--surface-2); }
+.legende .nom { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.legende .discret { min-width: 44px; text-align: right; }
+.pastille-serie { width: 12px; height: 12px; border-radius: 4px; flex: none; }
+.efface { opacity: .3; }
+
+/* ───────── Trajectoire ───────── */
+
+.trajectoire { margin: 0; display: grid; gap: 4px; }
+.trajectoire figcaption { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.trajectoire figcaption strong { font-size: 1.25rem; }
+.trajectoire svg { width: 100%; height: auto; display: block; touch-action: pan-y; cursor: crosshair; }
+.trajectoire .grille { stroke: var(--trait); stroke-width: 1; }
+.trajectoire .cible { stroke: var(--texte-2); stroke-width: 1; }
+.trajectoire .axe { fill: var(--texte-2); font-size: 10px; }
+.trajectoire .courbe { fill: none; stroke: var(--serie-3); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 1; animation: dessine 1.2s var(--doux) both; }
+@keyframes dessine { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+.trajectoire .aire { fill: var(--serie-3); opacity: .1; animation: paraît .8s .5s both; }
+.trajectoire .viseur { stroke: var(--texte-2); stroke-width: 1; }
+/* L'anneau de la couleur de la surface garde le point lisible sur la courbe. */
+.trajectoire .point { fill: var(--serie-3); stroke: var(--surface); stroke-width: 2; transition: cx .15s, cy .15s; animation: paraît .4s 1s both; }
+@keyframes paraît { from { opacity: 0; } }
+
+/* ───────── Occupation d'un logement ───────── */
+
+.occupation { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 2px; height: 8px; max-width: 170px; margin-top: 4px; }
+.occupation span { border-radius: 2px; background: var(--surface-2); }
+.occupation .loue { background: var(--serie-3); }
+/* Vacant : rayé en plus d'être rouge, pour ne pas dépendre de la couleur. */
+.occupation .vacant { background: repeating-linear-gradient(135deg, var(--alerte) 0 2px, transparent 2px 4px); }
+
+/* ───────── Tuiles, avatars, parts ───────── */
+
+.tuile, .avatar {
+  flex: none; width: 40px; height: 40px; display: grid; place-items: center;
+  /* Fond lavé de la teinte, dessin dans l'encre du texte : la teinte dit de
+     quoi il s'agit, le dessin reste lisible même en jaune. */
+  background: color-mix(in srgb, var(--teinte) 20%, var(--surface));
+  color: var(--texte);
+}
+.tuile { border-radius: 12px; }
+.avatar { border-radius: 50%; font-weight: 700; box-shadow: inset 0 0 0 2px var(--teinte); }
+.tuile.loyer { --teinte: var(--serie-3); }
+
+.barre-proportions { display: flex; gap: 2px; height: 10px; border-radius: 5px; overflow: hidden; animation: devoile .9s var(--doux) both; }
+.barre-proportions span { min-width: 3px; flex-basis: 0; transition: flex-grow .6s var(--doux); }
+
+.duo { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.stat { background: var(--surface-2); border-radius: 14px; padding: 12px; display: grid; gap: 2px; min-width: 0; }
+.stat > span { font-size: .82rem; color: var(--texte-2); }
+.stat strong { font-size: 1.15rem; }
+
+.total-geant { font-size: 2rem; font-weight: 750; line-height: 1.1; letter-spacing: -.01em; }
+@media (max-width: 380px) { .total-geant { font-size: 1.7rem; } }
+
+/* ───────── Colonnes de la planification ───────── */
+
+.barres { height: 150px; gap: 4px; }
+.barres .colonne { transition: opacity .2s; }
+/* Jamais plus de 24 px de large : le reste de la case est de l'air. */
+.barres .barre-solde { left: 50%; right: auto; width: min(100%, 24px); translate: -50% 0; border-radius: 4px 4px 0 0; background: var(--serie-1); transform-origin: bottom; animation: monte-colonne .7s var(--ressort) both; animation-delay: calc(var(--i) * 35ms); transition: height .5s var(--doux), top .5s var(--doux), bottom .5s var(--doux); }
+.barres .barre-solde.negatif { border-radius: 0 0 4px 4px; background: var(--alerte); transform-origin: top; }
+@keyframes monte-colonne { from { transform: scaleY(0); } }
+.barres .colonne[aria-pressed='true'] .nom { color: var(--texte); font-weight: 700; }
+
+/* ═════════ Mouvement ═════════ */
+
+/* Les cartes d'une page arrivent l'une après l'autre, avec un léger rebond. */
+.page > * { animation: arrive .55s var(--ressort) both; animation-delay: calc(var(--rang, 0) * 55ms); }
+.page > :nth-child(2) { --rang: 1; } .page > :nth-child(3) { --rang: 2; } .page > :nth-child(4) { --rang: 3; }
+.page > :nth-child(5) { --rang: 4; } .page > :nth-child(6) { --rang: 5; } .page > :nth-child(n+7) { --rang: 6; }
+@keyframes arrive { from { opacity: 0; transform: translateY(18px) scale(.98); } }
+
+/* Les lignes d'une liste suivent leur carte. */
+.liste > * { animation: glisse .45s var(--doux) both; animation-delay: calc(120ms + var(--i, 0) * 45ms); }
+@keyframes glisse { from { opacity: 0; transform: translateX(-10px); } }
+
+/* Un bouton s'enfonce sous le doigt. */
+.bouton, .icone-bouton, .segments button { transition: transform .15s var(--ressort), background .2s, filter .2s; }
+.bouton:active, .icone-bouton:active { transform: scale(.94); }
+.bouton:hover { filter: brightness(1.06); }
+.element { transition: background .2s, transform .15s var(--ressort); border-radius: 12px; }
+button.element:active { transform: scale(.985); }
+button.element:hover { background: color-mix(in srgb, var(--primaire) 6%, transparent); }
+
+/* La pilule de la barre du bas glisse jusqu'à l'onglet touché — sans rebond :
+   en dépassant sa cible, elle sortait de l'écran au dernier onglet. */
+.barre nav { position: relative; }
+.barre .glisseur {
+  position: absolute; top: calc((var(--barre) - 48px) / 2); left: 0; width: 20%; height: 30px;
+  display: grid; place-items: center; pointer-events: none;
+  transform: translateX(calc(var(--position) * 100%)); transition: transform .4s var(--doux);
+}
+.barre .glisseur::before { content: ''; width: 56px; height: 30px; border-radius: 15px; background: var(--primaire-doux); }
+.barre button { position: relative; z-index: 1; }
+.barre button[aria-current='page'] span.pastille { background: none; animation: bond .5s var(--ressort); }
+@keyframes bond { 40% { transform: translateY(-4px) scale(1.12); } }
+
+/* Les fenêtres montent en ressort, et repartent au lieu de disparaître. */
+dialog.feuille[open] { animation: monte .42s var(--ressort); }
+dialog.feuille[open]::backdrop { animation: paraît .25s both; }
+@keyframes monte { from { transform: translateY(60px) scale(.96); opacity: 0; } }
+.feuille[open] > form > *, .feuille[open] > .contenu > * { animation: arrive .4s var(--doux) both; animation-delay: calc(90ms + var(--i, 0) * 30ms); }
+.feuille.fantome {
+  position: fixed; inset: auto 0 0 0; margin: 0 auto; z-index: 50; display: flex; flex-direction: column; pointer-events: none;
+  animation: repart .22s ease-in forwards;
+}
+@media (min-width: 600px) { .feuille.fantome { inset: 0; margin: auto; height: fit-content; } }
+@keyframes repart { to { transform: translateY(40px) scale(.97); opacity: 0; } }
+
+.toast { animation: toast .45s var(--ressort); }
+@keyframes toast { from { opacity: 0; transform: translate(-50%, 24px) scale(.9); } }
+.avis { animation: arrive .4s var(--doux) both; }
+.progression > div { animation: pousse .9s var(--doux) both; transform-origin: left; transition: width .6s var(--doux); }
+.puce { animation: arrive .3s var(--ressort) both; }
+.bandeau { animation: glisse .4s var(--doux) both; }
+
+/* ───────── Connexion ───────── */
+
+.vitrine {
+  margin: -22px -22px 0; padding: 26px 22px 0; border-radius: var(--rayon) var(--rayon) 0 0;
+  background: linear-gradient(135deg, var(--hero-a), var(--hero-b)); color: var(--sur-hero);
+  display: grid; gap: 10px; overflow: hidden;
+}
+.vitrine h1 { font-size: 1.7rem; }
+.vitrine p { opacity: .85; }
+.vitrine svg { width: 100%; height: auto; display: block; margin-top: 6px; }
+.vitrine .immeuble { fill: rgba(255, 255, 255, .16); animation: batir .7s var(--ressort) both; transform-origin: bottom; transform-box: fill-box; }
+.vitrine .immeuble:nth-of-type(2) { animation-delay: .1s; } .vitrine .immeuble:nth-of-type(3) { animation-delay: .2s; }
+@keyframes batir { from { transform: scaleY(0); } }
+/* Les fenêtres s'allument une à une, puis clignotent doucement : des logements habités. */
+.vitrine .fenetre { fill: #ffe9a8; opacity: 0; animation: allume .5s both, veille 5s ease-in-out infinite; animation-delay: calc(.6s + var(--i) * 90ms), calc(2s + var(--i) * 370ms); }
+@keyframes allume { to { opacity: .95; } }
+@keyframes veille { 0%, 100% { opacity: .95; } 50% { opacity: .45; } }
+
+/* « Réduire les animations » : plus rien ne glisse, ne rebondit ni ne
+   tourne. Ce qui paraissait en mouvement paraît en fondu bref ; les montants
+   s'affichent d'emblée (le code le sait aussi, cf. Nombre). */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; animation-delay: 0s !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+  .page > *, dialog.feuille[open], .toast { animation: paraît .2s both !important; animation-duration: .2s !important; }
+  .hero::before, .hero::after { animation: none !important; }
+}

@@ -38,7 +38,27 @@ export function Feuille({ titre, onFermer, children }) {
   useEffect(() => {
     const d = ref.current;
     if (!d.open) d.showModal();
-    return () => { if (d.open) d.close(); };
+    const ouverte = performance.now();
+    return () => {
+      // La fenêtre repart au lieu de disparaître d'un coup. React la retire de
+      // la page à l'instant où on la ferme : on laisse donc derrière elle une
+      // copie inerte, le temps de l'animation de sortie. Pas de copie pour une
+      // fenêtre à peine ouverte (le double montage de React en développement)
+      // ni quand les animations sont réduites.
+      const reduit = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+      if (!reduit && d.isConnected && performance.now() - ouverte > 250) {
+        const fantome = d.cloneNode(true);
+        fantome.classList.add('fantome');
+        fantome.setAttribute('aria-hidden', 'true');
+        fantome.inert = true;
+        document.body.append(fantome);
+        const retirer = () => fantome.remove();
+        fantome.addEventListener('animationend', (e) => { if (e.target === fantome) retirer(); });
+        // Filet : si l'animation ne se termine jamais, la copie ne reste pas.
+        setTimeout(retirer, 600);
+      }
+      if (d.open) d.close();
+    };
   }, []);
   return (
     <dialog

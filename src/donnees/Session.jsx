@@ -1,9 +1,9 @@
 // La session : qui est connecté, à quelle copropriété, et tout ce qu'on peut
 // y faire. Un seul contexte, parce que tout l'écran dépend des trois à la fois.
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import {
   onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword,
-  signInWithPopup, signOut, updateProfile, sendPasswordResetEmail,
+  signInWithPopup, signOut, sendPasswordResetEmail,
 } from 'firebase/auth';
 import {
   doc, collection, onSnapshot, getDoc, getDocs, getDocFromServer, setDoc, query, where, limit, updateDoc, writeBatch,
@@ -40,7 +40,7 @@ export function SessionProvider({ children, surErreur }) {
 
   useEffect(() => onAuthStateChanged(auth, (u) => {
     setUser(u);
-    if (!u) { setProfil(undefined); setCopro(undefined); }
+    if (!u) { setProfil(undefined); setCopro(undefined); nomSaisi.current = ''; }
   }), []);
 
   // Le profil dit à quelle copropriété on appartient.
@@ -73,9 +73,13 @@ export function SessionProvider({ children, surErreur }) {
   }, [user]);
 
   const coproId = profil?.coproId || null;
+  const nomSaisi = useRef('');
+  const profilCourant = useRef(profil);
+  profilCourant.current = profil;
 
-  // Relance de l'écoute de la copropriété après un refus passager (voir plus bas).
+  // Relance de l'écoute de la copropriété quand elle se trompe (voir plus bas).
   const [relance, setRelance] = useState(0);
+  const essaisCopro = useRef(0);
 
   useEffect(() => {
     if (!user || profil === undefined) return undefined;
@@ -101,7 +105,13 @@ export function SessionProvider({ children, surErreur }) {
       return () => { courant = false; clearTimeout(minuterie); };
     }
     let actif = true;
+    let recu = false;
+    let refus = 0;
+    const minuteries = [];
+    const plusTard = (geste, delai) => minuteries.push(setTimeout(() => { if (actif) geste(); }, delai));
     const ref = doc(db, 'copros', coproId);
+    const membre = (s) => s.exists() && (s.data().memberUids || []).includes(user.uid);
+    const adopter = (s) => setCopro({ id: s.id, ...s.data() });
 
     // Le pointeur du profil ne vaut plus rien si on a été retiré ou si la
     // copropriété a été supprimée : on l'efface, et l'écran d'accueil revient.
@@ -110,50 +120,72 @@ export function SessionProvider({ children, surErreur }) {
       setDoc(doc(db, 'users', user.uid), { coproId: null }, { merge: true }).catch(() => {});
     };
 
-    // Avant d'oublier, on redemande au serveur. L'écoute peut dire « absent »
-    // ou « refusé » à tort pendant un instant : juste après être entré avec un
-    // code, le cache ne connaît de la copropriété que notre propre écriture,
-    // et il arrivait une fois sur trois qu'on soit renvoyé à l'accueil alors
-    // qu'on venait d'entrer. Seule une réponse franche du serveur fait foi ;
-    // une panne de réseau, elle, ne prouve rien et ne fait rien oublier.
-    const douter = async (ecouteMorte, confirme = false) => {
+    // L'écoute est reprise de zéro, de plus en plus tard si elle se trompe encore.
+    const relancer = () => {
+      essaisCopro.current += 1;
+      plusTard(() => setRelance((n) => n + 1), Math.min(30000, 500 * 2 ** essaisCopro.current));
+    };
+
+    // Le serveur fait foi, pas l'écoute. Juste après avoir créé une
+    // copropriété ou y être entré avec un code, l'écoute locale peut dire
+    // « absente », « pas membre », « refusé » — ou ne rien dire du tout —
+    // alors que le serveur a bien le document et qu'on en est bien membre :
+    // constaté dans l'émulateur, une fois sur cinq à dix, sans que la cause
+    // dans le SDK soit établie. On se retrouvait à l'écran d'accueil pour de
+    // bon. Donc, au moindre doute, on demande au serveur :
+    //  - il confirme qu'on est membre : on affiche ce qu'il rend, et on
+    //    reprend l'écoute de zéro ;
+    //  - il dit le contraire deux fois de suite : alors seulement on oublie ;
+    //  - il ne répond pas (hors ligne) : on ne conclut rien.
+    const verifier = async () => {
       try {
         const s = await getDocFromServer(ref);
         if (!actif) return;
-        if (!s.exists() || !(s.data().memberUids || []).includes(user.uid)) { oublier(); return; }
-        // On est bien membre : si l'écoute est tombée, on la relance (trois
-        // fois au plus, pour ne pas tourner en rond sur une vraie panne).
-        if (ecouteMorte && relance < 3) setRelance((n) => n + 1);
+        if (membre(s)) { refus = 0; adopter(s); relancer(); return; }
+        refus += 1;
       } catch (e) {
         if (!actif || e.code !== 'permission-denied') return;
-        // Un refus isolé peut venir du même contretemps de jeton que plus
-        // haut : on ne conclut qu'au second, une seconde et demie plus tard.
-        if (!confirme) setTimeout(() => { if (actif) douter(ecouteMorte, true); }, 1500);
-        else oublier();
+        refus += 1;
       }
+      if (refus >= 2) oublier(); else plusTard(verifier, 1500);
     };
 
     const arreter = onSnapshot(
       ref,
       (s) => {
-        if (!s.exists() || !(s.data().memberUids || []).includes(user.uid)) { douter(false); return; }
-        setCopro({ id: s.id, ...s.data() });
+        if (!membre(s)) { verifier(); return; }
+        recu = true;
+        essaisCopro.current = 0;
+        adopter(s);
       },
-      (e) => { if (e.code === 'permission-denied') douter(true); }
+      () => verifier()
     );
-    return () => { actif = false; arreter(); };
+    // Une écoute qui n'a toujours rien rendu après deux secondes et demie est muette.
+    plusTard(() => { if (!recu) verifier(); }, 2500);
+
+    return () => { actif = false; minuteries.forEach(clearTimeout); arreter(); };
   }, [user, profil === undefined, coproId, relance]);
 
   const actions = useMemo(() => {
     const refProfil = () => doc(db, 'users', auth.currentUser.uid);
-    const nomAffiche = () => auth.currentUser.displayName || auth.currentUser.email?.split('@')[0] || 'Copropriétaire';
+    const nomAffiche = () => nomSaisi.current || profilCourant.current?.nom || auth.currentUser.displayName || auth.currentUser.email?.split('@')[0] || 'Copropriétaire';
     const trace = () => ({ modifiePar: auth.currentUser.uid, modifieLe: serverTimestamp() });
 
     return {
       connexion: (courriel, motDePasse) => signInWithEmailAndPassword(auth, courriel, motDePasse),
       async inscription(nom, courriel, motDePasse) {
+        // Le prénom est gardé en main avant même la création du compte : le
+        // profil met un instant à revenir du serveur, et créer sa copropriété
+        // dans cet intervalle l'aurait signée du début de l'adresse courriel.
+        nomSaisi.current = nom;
         const { user: u } = await createUserWithEmailAndPassword(auth, courriel, motDePasse);
-        await updateProfile(u, { displayName: nom });
+        // Le prénom va dans le profil Firestore, PAS dans le compte
+        // (updateProfile). Modifier le compte fait émettre un nouveau jeton,
+        // et Firestore relance alors toutes ses connexions : fait dans la
+        // seconde qui suit l'inscription, cela laissait une fois sur cinq les
+        // écoutes figées — l'écran d'accueil restait affiché à quelqu'un qui
+        // venait de créer ou de rejoindre sa copropriété.
+        await setDoc(doc(db, 'users', u.uid), { nom }, { merge: true });
       },
       google: () => signInWithPopup(auth, fournisseurGoogle),
       motDePasseOublie: (courriel) => sendPasswordResetEmail(auth, courriel),
