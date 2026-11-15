@@ -70,10 +70,42 @@ button, input, select { font: inherit; color: inherit; }
 
 /* ───────── Coquille ───────── */
 
+/* La barre titre : collée en haut, translucide pour laisser deviner ce qui
+   défile dessous, et poussée sous l'encoche des iPhone (safe-area). */
+.barre-titre {
+  position: sticky; top: 0; z-index: 6;
+  padding-top: env(safe-area-inset-top);
+  background: color-mix(in srgb, var(--fond) 82%, transparent);
+  backdrop-filter: saturate(1.4) blur(14px);
+  -webkit-backdrop-filter: saturate(1.4) blur(14px);
+  border-bottom: 1px solid color-mix(in srgb, var(--trait) 70%, transparent);
+}
+.barre-titre-contenu { max-width: 720px; margin: 0 auto; height: 56px; padding: 0 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.marque-app { display: inline-flex; align-items: center; gap: 10px; min-width: 0; font-weight: 750; letter-spacing: -.01em; font-size: 1.05rem; white-space: nowrap; }
+.marque-app .logo { flex: none; border-radius: 9px; box-shadow: 0 2px 6px rgba(19, 78, 66, .25); }
+.pastille-copro {
+  display: inline-flex; align-items: center; gap: 4px; min-width: 0; max-width: 55%;
+  height: 36px; padding: 0 10px 0 14px; border-radius: 999px; border: 1px solid var(--trait);
+  background: var(--surface); color: var(--texte); cursor: pointer; font-size: .88rem; font-weight: 600;
+}
+.pastille-copro span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pastille-copro svg { flex: none; color: var(--texte-2); }
+/* Sur un écran étroit, le mot cède la place au logo seul : à 360 px, il
+   passait sous la pastille (constaté sur capture), et c'est le nom de
+   l'immeuble qui dit où l'on est. */
+@media (max-width: 375px) { .barre-titre .marque-app > span { display: none; } }
+/* Au-dessus, la marque garde sa place entière et c'est le nom de l'immeuble,
+   dans la pastille, qui se raccourcit : « Ma copropri… » se lisait mal. */
+.barre-titre .marque-app { flex-shrink: 0; }
+.barre-titre .pastille-copro { flex: 0 1 auto; max-width: none; }
+.vitrine .marque-app { gap: 12px; color: inherit; white-space: normal; }
+.vitrine .marque-app h1 { min-width: 0; }
+.vitrine .marque-app .logo { box-shadow: 0 0 0 2px rgba(255, 255, 255, .35); border-radius: 11px; }
+
 .page {
   max-width: 720px;
   margin: 0 auto;
-  padding: calc(16px + env(safe-area-inset-top)) 16px calc(var(--barre) + 28px + env(safe-area-inset-bottom));
+  padding: 16px 16px calc(var(--barre) + 28px + env(safe-area-inset-bottom));
   display: grid;
   gap: 14px;
 }
@@ -451,9 +483,8 @@ dialog.feuille[open]::backdrop { animation: paraît .25s both; }
   background: linear-gradient(135deg, var(--hero-a), var(--hero-b)); color: var(--sur-hero);
   display: grid; gap: 10px; overflow: hidden;
 }
-.vitrine h1 { font-size: 1.7rem; }
 .vitrine p { opacity: .85; }
-.vitrine svg { width: 100%; height: auto; display: block; margin-top: 6px; }
+.vitrine .illustration { width: 100%; height: auto; display: block; margin-top: 6px; }
 .vitrine .immeuble { fill: rgba(255, 255, 255, .16); animation: batir .7s var(--ressort) both; transform-origin: bottom; transform-box: fill-box; }
 .vitrine .immeuble:nth-of-type(2) { animation-delay: .1s; } .vitrine .immeuble:nth-of-type(3) { animation-delay: .2s; }
 @keyframes batir { from { transform: scaleY(0); } }
@@ -469,4 +500,15 @@ dialog.feuille[open]::backdrop { animation: paraît .25s both; }
   *, *::before, *::after { animation-duration: .01ms !important; animation-delay: 0s !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
   .page > *, dialog.feuille[open], .toast { animation: paraît .2s both !important; animation-duration: .2s !important; }
   .hero::before, .hero::after { animation: none !important; }
+}
+
+/* Sur un petit écran, l'illustration et le titre se resserrent : le bouton
+   Google, juste dessous, doit rester visible sans défiler. */
+.vitrine h1 { font-size: 1.5rem; }
+.vitrine .illustration { max-height: 96px; }
+@media (max-width: 380px), (max-height: 700px) {
+  .vitrine { padding-top: 20px; gap: 6px; }
+  .vitrine h1 { font-size: 1.35rem; }
+  .vitrine p { font-size: .92rem; }
+  .vitrine .illustration { max-height: 64px; }
 }

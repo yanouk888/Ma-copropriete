@@ -3,7 +3,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import {
   onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword,
-  signInWithPopup, signOut, sendPasswordResetEmail, sendEmailVerification,
+  signInWithPopup, signOut, sendPasswordResetEmail, sendEmailVerification, linkWithPopup, unlink,
 } from 'firebase/auth';
 import {
   doc, collection, onSnapshot, getDoc, getDocs, getDocFromServer, setDoc, query, where, limit, updateDoc, writeBatch,
@@ -28,6 +28,12 @@ const MESSAGES = {
   'auth/too-many-requests': 'Trop d\'essais. Réessayez dans quelques minutes.',
   'auth/network-request-failed': 'Pas de réseau. Vérifiez la connexion.',
   'auth/popup-closed-by-user': 'La fenêtre Google a été fermée avant la fin.',
+  'auth/cancelled-popup-request': 'La fenêtre Google a été fermée avant la fin.',
+  'auth/internal-error': 'La fenêtre Google n\'a pas pu s\'ouvrir. Vérifiez la connexion, puis réessayez.',
+  'auth/popup-blocked': 'Le navigateur a bloqué la fenêtre Google. Autorisez les fenêtres pour ce site, puis réessayez.',
+  'auth/credential-already-in-use': 'Ce compte Google sert déjà à un autre compte de Ma copropriété. Connectez-vous avec lui, ou choisissez un autre compte Google.',
+  'auth/provider-already-linked': 'Un compte Google est déjà lié à ce compte.',
+  'auth/requires-recent-login': 'Par sécurité, déconnectez-vous puis reconnectez-vous avant de faire ce changement.',
   'auth/unauthorized-domain': 'Ce domaine n\'est pas autorisé dans Firebase (Authentication → Settings → Domaines autorisés).',
   'permission-denied': 'Accès refusé.',
   unavailable: 'Pas de réseau. Réessayez une fois reconnecté.',
@@ -229,6 +235,24 @@ export function SessionProvider({ children, surErreur }) {
         await httpsCallable(fonctions, 'inviterParCourriel')({ coproId, courriel });
       },
       google: () => signInWithPopup(auth, fournisseurGoogle),
+
+      /**
+       * Lie un compte Google au compte existant : ensuite, « Continuer avec
+       * Google » ouvre le même compte, avec les mêmes copropriétés.
+       *
+       * La page se recharge aussitôt après. Lier un fournisseur change le
+       * compte Firebase et lui fait émettre un nouveau jeton — exactement ce
+       * qui figeait les écoutes de Firestore à la 1.1.0 (voir l'inscription
+       * plus bas). Un rechargement repart d'un état sain, déjà connecté.
+       */
+      async lierGoogle() {
+        await linkWithPopup(auth.currentUser, fournisseurGoogle);
+        window.location.reload();
+      },
+      async dissocierGoogle() {
+        await unlink(auth.currentUser, 'google.com');
+        window.location.reload();
+      },
       motDePasseOublie: (courriel) => sendPasswordResetEmail(auth, courriel),
       deconnexion: () => signOut(auth),
 

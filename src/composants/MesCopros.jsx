@@ -63,6 +63,22 @@ export function FeuilleMesCopros({ onFermer }) {
   );
 }
 
+/** La pastille de la barre titre : la copropriété ouverte, sur tous les écrans. */
+export function PastilleCopro() {
+  const { copro } = useSession();
+  const [ouvert, setOuvert] = useState(false);
+  return (
+    <>
+      <button type="button" className="pastille-copro" onClick={() => setOuvert(true)} aria-haspopup="dialog"
+        aria-label={`Copropriété ouverte : ${copro.nom}. Changer de copropriété`}>
+        <span>{copro.nom}</span>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+      </button>
+      {ouvert ? <FeuilleMesCopros onFermer={() => setOuvert(false)} /> : null}
+    </>
+  );
+}
+
 /** Le nom de la copropriété ouverte, qui ouvre le sélecteur. */
 export function TitreCopro({ sousTitre }) {
   const { copro } = useSession();

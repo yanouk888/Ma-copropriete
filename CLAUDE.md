@@ -124,6 +124,9 @@ Firestore relance toutes ses connexions, et une fois sur cinq ses écoutes
 restaient figées — on était renvoyé à l'écran d'accueil après avoir créé ou
 rejoint une copropriété. Le prénom vit dans `users/{uid}.nom`. Trouvé à la
 1.1.0, après beaucoup d'essais ; voir `Session.jsx`.
+Seule exception : lier ou dissocier Google (Réglages → Compte), qui ne peut
+pas faire autrement — la page se **recharge** aussitôt après, pour repartir
+d'un état sain.
 
 Le service worker (`public/sw.js`) ne charge **pas** le SDK Firebase et ne met
 rien en cache : il lit l'événement `push` directement. Ne pas y ramener

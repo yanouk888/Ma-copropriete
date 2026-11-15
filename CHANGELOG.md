@@ -1,5 +1,14 @@
 # Journal des versions
 
+## 1.4.0 — 15 novembre 2026
+
+- **Une barre titre** en haut de chaque écran, avec le logo et la
+  copropriété ouverte : touchez-la pour passer à une autre.
+- **Un nouveau logo** : un immeuble dont le revenu monte. Il remplace aussi
+  l'icône de l'écran d'accueil (à réinstaller pour la voir changer).
+- **Lier votre compte Google** sous Réglages → Compte : ensuite, « Continuer
+  avec Google » ouvre ce même compte, avec vos copropriétés, sans mot de passe.
+
 ## 1.3.0 — 15 novembre 2026
 
 - **Plusieurs copropriétés.** Un logement avec un associé, un autre avec
