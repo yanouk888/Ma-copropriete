@@ -37,6 +37,27 @@ avant de passer à la suivante. Cochez au fur et à mesure.
 | Courriels | Resend, domaine `ricard.app` | mot de passe oublié, invitation, résumé |
 | Construction | GitHub Actions | compile, publie l'image, déploie Firebase |
 
+### En deux temps
+
+**Phase 1 — le site sur le NAS**, avec Firebase au forfait gratuit : on s'y
+connecte par courriel et mot de passe, et les données sont partagées. Pas de
+connexion Google, pas de courriels Resend, pas de notifications.
+
+| Étape | Phase 1 |
+|---|---|
+| 1 Projet Firebase | oui, **sans** 1.1 (Blaze) |
+| 2 Connexion | 2.1 et 2.3 seulement |
+| 3 Firestore | oui, **avec 3.1** (règles collées à la main) |
+| 4 Application Web | 4.1 seulement |
+| 5 Google, 6 Resend | non |
+| 7 GitHub | 7.1 (fait) et les **5 premières variables** de 7.3 |
+| 8 Déploiement | **8.2 seulement** (l'image) |
+| 9 NAS et tunnel | oui |
+| 10 Vérifications | lignes 1, 3, 4 et 8, en se connectant par courriel |
+
+**Phase 2 — Google, Resend, notifications** : tout le reste (1.1, 2.2, 2.4,
+4.2, 5, 6, 7.2, la fin de 7.3, 8.1), puis l'étape 10 au complet.
+
 **Ce qui se fait une seule fois** : les étapes 1 à 9. **Ensuite**, toute
 fusion dans `main` part en production toute seule (voir [Mettre à
 jour](#mettre-à-jour-lapplication)).
@@ -125,9 +146,23 @@ et **Google**, tous deux **Activé**.
    > échouer le déploiement des fonctions. **Ce choix est définitif.**
 4. **Démarrer en mode production** → **Créer**.
 
-✅ **Vérifier** : la base s'affiche, vide. Onglet **Règles** : tout est
-refusé pour l'instant — c'est normal, le workflow y mettra les vraies règles
-(étape 8).
+### 3.1 Coller les règles
+
+En phase 1, rien ne déploie les règles automatiquement (il faudrait le compte
+de déploiement de la phase 2). On les colle donc une fois, à la main.
+
+1. Ouvrir sur GitHub le fichier **`firestore.rules`** du dépôt (branche
+   `main`) → bouton **Copy raw file** (icône de copie, en haut à droite du
+   fichier).
+2. Console Firebase → **Firestore Database** → onglet **Règles**.
+3. Tout sélectionner dans l'éditeur, **coller** par-dessus → **Publier**.
+
+✅ **Vérifier** : l'éditeur commence par `rules_version = '2';` et contient
+`match /copros/{coproId}`. En haut, la date de publication est celle
+d'aujourd'hui.
+
+> Retour arrière : l'onglet Règles garde l'historique des versions publiées.
+> À la phase 2, le workflow republiera ce même fichier à chaque changement.
 
 ---
 
@@ -399,16 +434,18 @@ Onglet **Variables** → **New repository variable**, une par ligne :
 | `VITE_FIREBASE_AUTH_DOMAIN` | **`copropriete.ricard.app`** |
 | `VITE_FIREBASE_MESSAGING_SENDER_ID` | `messagingSenderId` (étape 4.1) |
 | `VITE_FIREBASE_APP_ID` | `appId` (étape 4.1) |
-| `VITE_FIREBASE_VAPID_KEY` | la clé Web Push (étape 4.2) |
-| `ADRESSE_APP` | **`https://copropriete.ricard.app`** (sans `/` à la fin) |
-| `EXPEDITEUR` | **`Ma copropriété <copropriete@ricard.app>`** |
+| `VITE_FIREBASE_VAPID_KEY` | la clé Web Push (étape 4.2) — *phase 2* |
+| `ADRESSE_APP` | **`https://copropriete.ricard.app`** (sans `/` à la fin) — *phase 2* |
+| `EXPEDITEUR` | **`Ma copropriété <copropriete@ricard.app>`** — *phase 2* |
+| `DEPLOIEMENT_FIREBASE` | **`tout`** — *phase 2, en dernier* : c'est elle qui autorise le workflow **Firebase** à déployer règles et fonctions |
 
 Des **variables** et non des secrets, sauf le compte de service : ces
 valeurs sont publiques, et une variable se relit, ce qui aide à repérer une
 faute de frappe. Le domaine n'est ainsi écrit nulle part dans le code : le
 jour où il change, on change deux variables et on relance.
 
-✅ **Vérifier** : 1 secret, 8 variables. Effacer le fichier `.json` de votre
+✅ **Vérifier** : en phase 1, 5 variables et aucun secret. En phase 2,
+1 secret et 9 variables ; effacer alors le fichier `.json` de votre
 ordinateur.
 
 ---
