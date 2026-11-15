@@ -10,6 +10,7 @@ import Apercu from './onglets/Apercu';
 import Revenus from './onglets/Revenus';
 import Depenses from './onglets/Depenses';
 import Planification from './onglets/Planification';
+import Suivi from './onglets/Suivi';
 import Reglages from './onglets/Reglages';
 
 const ONGLETS = [
@@ -17,6 +18,7 @@ const ONGLETS = [
   { cle: 'revenus', nom: 'Revenus', Ecran: Revenus },
   { cle: 'depenses', nom: 'Dépenses', Ecran: Depenses },
   { cle: 'planification', nom: 'Planifier', Ecran: Planification },
+  { cle: 'suivi', nom: 'Suivi', Ecran: Suivi },
   { cle: 'reglages', nom: 'Réglages', Ecran: Reglages },
 ];
 
@@ -72,7 +74,7 @@ function Coquille() {
           disait de laquelle il s'agit. */}
       <header className="barre-titre">
         <div className="barre-titre-contenu">
-          <span className="marque-app"><Logo taille={30} /><span>Ma copropriété</span></span>
+          <span className="marque-app"><Logo taille={30} /><span>Mes copropriétés</span></span>
           <PastilleCopro />
         </div>
       </header>

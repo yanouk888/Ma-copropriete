@@ -1,5 +1,26 @@
 # Journal des versions
 
+## 1.5.0 — 15 novembre 2026
+
+- **L'application s'appelle maintenant « Mes copropriétés »** : un compte peut
+  en détenir plusieurs. Sous l'icône de l'écran d'accueil : « Mes copros »
+  (après l'avoir réinstallée).
+- **Le suivi des paiements**, dans le nouvel onglet Suivi. Chaque mois, les
+  loyers, les dépenses et le paiement hypothécaire prévus attendent votre
+  confirmation : le montant réellement payé, la date, le fournisseur, la
+  TPS et la TVQ à titre d'information. « Pas payé » se note aussi.
+- **Les pièces jointes** : une facture ou un reçu sur chaque paiement, le
+  contrat d'une dépense, le bail d'un logement. PDF ou photo, gardés sur le
+  serveur de la maison, visibles des seuls copropriétaires.
+- **Le rapport annuel**, pour l'impôt : loyers reçus, dépenses classées selon
+  les intitulés de l'état des loyers (T776 et TP-128), intérêts
+  hypothécaires, dépenses en capital à part, et la part de chaque
+  propriétaire. À imprimer en PDF ou à exporter pour le comptable.
+- **Dépense courante ou en capital** : à préciser sur chaque dépense et
+  chaque paiement ; une dépense en capital ne se déduit pas d'un coup.
+- **Parts de propriété** : distinctes de la proportion des versements, elles
+  servent au rapport. Le gestionnaire les règle dans Réglages.
+
 ## 1.4.0 — 15 novembre 2026
 
 - **Une barre titre** en haut de chaque écran, avec le logo et la

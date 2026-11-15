@@ -8,6 +8,7 @@ import {
 import { moisDe, libelleMois, ajouterMois, ecartMois } from '../calc/mois';
 import { dollars } from '../donnees/format';
 import { nouvelId } from '../donnees/code';
+import PiecesJointes, { usePiecesJointes } from '../composants/PiecesJointes';
 import { Nombre, Repartition, TuilePoste, postesDuMois, posteDe } from '../composants/graphiques';
 import { Feuille, Champ, ChampMontant, ChampMois, Segments, Bascule, Icone, Vide, Avis, montantValide } from '../composants/ui';
 
@@ -33,6 +34,8 @@ function FeuilleDepense({ depense, onFermer }) {
   const [amortie, setAmortie] = useState(depense?.amortie ?? true);
   const [nombreVersements, setNombreVersements] = useState(depense?.nombre ? String(depense.nombre) : '');
   const [premier, setPremier] = useState(depense?.premier || mois);
+  const [nature, setNature] = useState(depense?.nature || (depense?.type === 'versements' ? 'capital' : 'courante'));
+  const pieces = usePiecesJointes(copro.id, depense?.pieces || []);
   const [erreur, setErreur] = useState('');
 
   const valeur = montantValide(montant);
@@ -45,7 +48,9 @@ function FeuilleDepense({ depense, onFermer }) {
   const enregistrer = (e) => {
     e.preventDefault();
     if (valeur === null) { setErreur('Entrez un montant plus grand que zéro.'); return; }
-    const base = { id: depense?.id || nouvelId(), nom: nom.trim(), categorie, type };
+    // La nature et les pièces jointes (contrat, soumission) suivent la dépense,
+    // quel que soit son type ; la nature est reprise par le suivi des paiements.
+    const base = { id: depense?.id || nouvelId(), nom: nom.trim(), categorie, type, nature, pieces: pieces.pieces };
     let suivante;
     if (type === 'versements') {
       const n = Number(nombreVersements);
@@ -64,6 +69,7 @@ function FeuilleDepense({ depense, onFermer }) {
       suivante = { ...base, frequence, paliers, moisRepere: aDate ? repere : null, fin: terminee ? fin : null };
     }
     modifier({ depenses: nouveau ? [...copro.depenses, suivante] : copro.depenses.map((d) => (d.id === suivante.id ? suivante : d)) });
+    pieces.valider();
     onFermer();
   };
 
@@ -145,6 +151,10 @@ function FeuilleDepense({ depense, onFermer }) {
                 : 'Sinon, elle se paie à même le solde du compte, sans toucher aux versements.'} />
           </>
         )}
+        <Segments libelle="Nature de la dépense" valeur={nature} onChange={setNature}
+          options={[{ valeur: 'courante', libelle: 'Courante' }, { valeur: 'capital', libelle: 'En capital' }]} />
+        <small className="discret">Pour l'impôt : une dépense en capital (bien durable, amélioration) s'amortit au lieu de se déduire d'un coup. Proposée à chaque confirmation de paiement, et modifiable là.</small>
+        <PiecesJointes coproId={copro.id} etat={pieces} libelle="Documents (contrat, soumission)" />
         <div className="pied">
           {!nouveau ? <button type="button" className="bouton danger gauche" onClick={supprimer}>Supprimer</button> : null}
           <button type="button" className="bouton texte" onClick={onFermer}>Annuler</button>

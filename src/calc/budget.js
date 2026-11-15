@@ -24,9 +24,14 @@ export const PAIES = {
   mensuel: { libelle: 'Chaque mois', diviseur: 1 },
 };
 
+// Les catégories proposées. Les premières sont celles du quotidien ; les
+// suivantes existent pour coller aux intitulés des formulaires d'impôt
+// (voir RUBRIQUES dans suivi.js). L'ordre ne bouge pas : une dépense déjà
+// saisie garde la sienne.
 export const CATEGORIES = [
   'Frais de condo', 'Taxes', 'Assurances', 'Énergie', 'Entretien',
-  'Gestion', 'Services', 'Travaux', 'Autre',
+  'Gestion', 'Services', 'Travaux', 'Publicité', 'Honoraires professionnels',
+  'Frais bancaires', 'Frais de bureau', 'Déplacements', 'Salaires', 'Autre',
 ];
 
 const arrondi = (n) => Math.round(n * 100) / 100;

@@ -1,6 +1,6 @@
 {
-  "name": "Ma copropriété",
-  "short_name": "Ma copro",
+  "name": "Mes copropriétés",
+  "short_name": "Mes copros",
   "description": "Budget d'une copropriété locative : loyers, dépenses, fonds de roulement et planification.",
   "lang": "fr-CA",
   "start_url": "/",

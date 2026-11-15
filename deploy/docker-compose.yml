@@ -1,9 +1,13 @@
-# Ma copropriété sur le NAS (Container Manager → Projet `copropriete`).
+# Mes copropriétés sur le NAS (Container Manager → Projet `copropriete`).
 #
-# Un seul service : l'application n'a pas d'API à elle. Comptes, base,
-# fonctions, notifications et courriels vivent chez Firebase et Resend ; seuls
-# les fichiers du site sont ici. Aucun fichier de configuration à remplir sur
-# le NAS : tout est compilé dans l'image, sur GitHub Actions.
+# Deux services : le site, et une petite API qui garde les pièces jointes
+# (factures, baux) dans le dossier fichiers/ à côté de ce compose. Comptes,
+# base, fonctions, notifications et courriels vivent chez Firebase et Resend.
+# Aucun fichier de configuration à remplir sur le NAS : tout est compilé dans
+# les images, sur GitHub Actions.
+#
+# ⚠️ Les pièces jointes n'existent QUE dans fichiers/ : ce dossier doit être
+# dans la sauvegarde du NAS (Hyper Backup). Voir deploy/README.md.
 #
 # Le tunnel Cloudflare et watchtower vivent dans le projet `infra` — dépôt
 # yanouk888/NAS_923_infrastructure. Marche à suivre : deploy/README.md.
@@ -36,6 +40,31 @@ services:
     # relance, au lieu d'asphyxier DSM et les autres applications.
     mem_limit: 128m
 
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  api:
+    image: ghcr.io/yanouk888/copropriete-api:latest
+    # Le site la joint par ce nom (deploy/Caddyfile, /api/*).
+    container_name: copropriete-api
+    restart: unless-stopped
+    labels:
+      com.centurylinklabs.watchtower.enable: "true"
+    # Pas de route de tunnel vers elle : seul le conteneur du site lui parle,
+    # par edge. Depuis Internet, on n'y arrive qu'en passant par /api/ du site.
+    expose:
+      - "8080"
+    networks:
+      - edge
+    volumes:
+      # Chemin relatif : le dossier fichiers/ à côté de ce compose, créé à la
+      # main dans File Station AVANT le premier démarrage — sinon Docker le
+      # crée lui-même, au nom de root, et File Station ne pourra plus y entrer.
+      - ./fichiers:/data
+    mem_limit: 128m
     logging:
       driver: json-file
       options:

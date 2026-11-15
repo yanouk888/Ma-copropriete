@@ -28,7 +28,7 @@ function gabarit({ titre, corps, bouton, pied }) {
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4f6f3;padding:24px 12px"><tr><td align="center">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:#ffffff;border-radius:18px;overflow:hidden">
 <tr><td style="background:#1f6b5c;background:linear-gradient(135deg,#134e42,#2c8d76);padding:22px 24px;color:#ffffff">
-<div style="font-size:12px;letter-spacing:.08em;text-transform:uppercase;opacity:.85">Ma copropriété</div>
+<div style="font-size:12px;letter-spacing:.08em;text-transform:uppercase;opacity:.85">Mes copropriétés</div>
 <div style="font-size:22px;font-weight:700;line-height:1.25;margin-top:4px">${echapper(titre)}</div>
 </td></tr>
 <tr><td style="padding:22px 24px;font-size:15px;line-height:1.5">${corps}
@@ -49,7 +49,7 @@ export function courrielInvitation({ nomInviteur, nomCopro, code, adresseApp }) 
     sujet: titre,
     html: gabarit({
       titre,
-      corps: `<p style="margin:0 0 14px">${echapper(nomInviteur)} tient le budget de la copropriété <strong>${echapper(nomCopro)}</strong> dans Ma copropriété, et vous invite à le partager : loyers, dépenses, fonds de roulement et part de chacun.</p>
+      corps: `<p style="margin:0 0 14px">${echapper(nomInviteur)} tient le budget de la copropriété <strong>${echapper(nomCopro)}</strong> dans Mes copropriétés, et vous invite à le partager : loyers, dépenses, fonds de roulement et part de chacun.</p>
 <p style="margin:0 0 6px">Votre code d'invitation :</p>
 <p style="margin:0;font:600 22px/1.3 ui-monospace,Menlo,Consolas,monospace;letter-spacing:.06em">${echapper(code)}</p>`,
       bouton: { texte: 'Rejoindre la copropriété', lien },
@@ -57,7 +57,7 @@ export function courrielInvitation({ nomInviteur, nomCopro, code, adresseApp }) 
     }),
     texte: `${titre}
 
-${nomInviteur} tient le budget de la copropriété « ${nomCopro} » dans Ma copropriété, et vous invite à le partager.
+${nomInviteur} tient le budget de la copropriété « ${nomCopro} » dans Mes copropriétés, et vous invite à le partager.
 
 Votre code d'invitation : ${code}
 
@@ -109,7 +109,7 @@ ${autosuffisante ? ligne('Surplus', dollars(r.surplus), true) : ligne('À verser
 ${autosuffisante ? '' : ligne('Votre part', `${dollars(part)} par mois`, true)}
 ${ligne(`Solde prévu fin ${libelleMois(fin.mois)}`, dollars(fin.soldeFin))}
 </table>${alerte}`,
-      bouton: { texte: 'Ouvrir Ma copropriété', lien: adresseApp },
+      bouton: { texte: 'Ouvrir Mes copropriétés', lien: adresseApp },
       pied: `Résumé envoyé le premier de chaque mois. Pour ne plus le recevoir : Réglages → Notifications → Résumé mensuel par courriel.`,
     }),
     texte: `${titre}

@@ -1,4 +1,4 @@
-# Ma copropriété
+# Mes copropriétés
 
 Le budget d'une copropriété achetée pour être louée, tenu à plusieurs. L'objectif
 qu'elle sert : **l'autosuffisance** — que les loyers paient tout, ou presque.

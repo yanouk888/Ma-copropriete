@@ -41,7 +41,7 @@ export default function Connexion() {
     <div className="centre">
       <form className="carte" onSubmit={soumettre}>
         <div className="vitrine">
-          <div className="marque-app"><Logo taille={44} /><h1>Ma copropriété</h1></div>
+          <div className="marque-app"><Logo taille={44} /><h1>Mes copropriétés</h1></div>
           <p>Le budget d'une copropriété locative, à plusieurs.</p>
           {/* Trois immeubles qui se bâtissent, puis leurs fenêtres qui s'allument : purement décoratif. */}
           <svg className="illustration" viewBox="0 0 320 110" aria-hidden="true">

@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { useSession } from '../donnees/Session';
 import { resumeDuMois, planifier, premierMoisNegatif, totalProportions, PAIES } from '../calc/budget';
+import { aConfirmer } from '../calc/suivi';
 import { moisDe, libelleMois } from '../calc/mois';
 import { dollars, pourcent } from '../donnees/format';
 import { Avis, Vide } from '../composants/ui';
@@ -8,7 +9,7 @@ import { TitreCopro } from '../composants/MesCopros';
 import { Jauge, Nombre, EntreesSorties, Trajectoire, Avatar, couleurSerie } from '../composants/graphiques';
 
 export default function Apercu({ allerA }) {
-  const { copro, user } = useSession();
+  const { copro, user, paiements } = useSession();
   const mois = moisDe();
   const resume = useMemo(() => resumeDuMois(copro, mois), [copro, mois]);
   const plan = useMemo(() => planifier(copro, mois), [copro, mois]);
@@ -21,6 +22,7 @@ export default function Apercu({ allerA }) {
   // saisi » regarde donc les montants, pas le nombre de logements.
   const rienDeSaisi = resume.revenus === 0 && !copro.depenses.length && !copro.hypotheque;
   const atteint = resume.taux !== null && resume.manque === 0;
+  const enAttente = useMemo(() => aConfirmer(copro, paiements, mois).length, [copro, paiements, mois]);
 
   return (
     <>
@@ -61,6 +63,10 @@ export default function Apercu({ allerA }) {
               )}
             </div>
           </section>
+
+          {enAttente ? (
+            <Avis ton="info">{enAttente} paiement{enAttente > 1 ? 's' : ''} à confirmer, pour le suivi et le rapport d'impôt. <button className="bouton texte" onClick={() => allerA('suivi')}>Confirmer</button></Avis>
+          ) : null}
 
           {negatif ? (
             <Avis ton="alerte">Le solde du compte passe sous zéro en <strong>{libelleMois(negatif)}</strong>. <button className="bouton texte" onClick={() => allerA('planification')}>Voir la planification</button></Avis>

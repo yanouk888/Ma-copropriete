@@ -61,4 +61,9 @@ export default defineConfig({
     __NOUVEAUTES__: JSON.stringify(NOUVEAUTES),
   },
   build: { outDir: 'dist', sourcemap: false },
+  // En développement et pour les essais, /api va à l'API lancée à côté
+  // (node deploy/api/serveur.mjs, port 8787) ; en production, c'est Caddy
+  // qui relaie (deploy/Caddyfile).
+  server: { proxy: { '/api': 'http://127.0.0.1:8787' } },
+  preview: { proxy: { '/api': 'http://127.0.0.1:8787' } },
 });

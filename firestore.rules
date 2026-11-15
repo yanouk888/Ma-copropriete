@@ -129,6 +129,30 @@ service cloud.firestore {
       allow update: if entree() || depart() || saFiche() || budget() || gestion();
 
       allow delete: if gestionnaire();
+
+      // ─── Les paiements confirmés (Suivi) ───
+      // Une sous-collection : des années de factures ne tiendraient pas dans
+      // le mégaoctet d'un document. Les membres de la copropriété — ceux du
+      // document parent, relus à chaque requête — lisent et écrivent ; un
+      // ancien membre perd l'accès dès son départ.
+      match /paiements/{paiementId} {
+        function membreDeLaCopro() {
+          return connecte() && uid() in get(/databases/$(database)/documents/copros/$(coproId)).data.memberUids;
+        }
+        function paiementValide() {
+          let p = request.resource.data;
+          return p.id == paiementId
+            && p.statut in ['paye', 'nonpaye']
+            && p.sens in ['entree', 'sortie']
+            && p.montant is number && p.montant >= 0
+            && p.mois is string && p.mois.matches('^[0-9]{4}-(0[1-9]|1[0-2])$')
+            // Les pièces ne sont que des références vers le NAS ; on en borne
+            // le nombre pour qu'un document ne grossisse pas sans fin.
+            && p.pieces is list && p.pieces.size() <= 20;
+        }
+        allow read, delete: if membreDeLaCopro();
+        allow create, update: if membreDeLaCopro() && paiementValide();
+      }
     }
   }
 }

@@ -1,4 +1,4 @@
-# Mettre Ma copropriété en ligne
+# Mettre Mes copropriétés en ligne
 
 Le guide complet, dans l'ordre, pour servir l'application à
 **`copropriete.ricard.app`** depuis le NAS, comme Budget Maison.
@@ -112,7 +112,7 @@ Les fonctions (notifications, courriels) et Secret Manager l'exigent.
 ### 2.2 Google
 
 1. Même onglet → **Ajouter un fournisseur** → **Google** → **Activer**.
-2. **Nom public du projet** : **`Ma copropriété`**. C'est ce que Google
+2. **Nom public du projet** : **`Mes copropriétés`**. C'est ce que Google
    affichera dans sa fenêtre de connexion.
 3. **Adresse e-mail d'assistance** : la vôtre.
 4. **Enregistrer**.
@@ -243,7 +243,7 @@ copropriete.ricard.app » au lieu d'un nom de projet obscur.
 
 1. Même console → **API et services → Écran de consentement OAuth** (ou
    **Google Auth Platform → Branding**, selon la version de la console).
-2. **Nom de l'application** : `Ma copropriété`. **Adresse d'assistance** : la
+2. **Nom de l'application** : `Mes copropriétés`. **Adresse d'assistance** : la
    vôtre.
 3. **Domaines autorisés** : ajouter **`ricard.app`**.
 4. **Ne pas** téléverser de logo : un logo déclenche une vérification par
@@ -336,10 +336,10 @@ qui finit souvent dans les indésirables.
 Toujours dans **Modèles**, pour **Validation de l'adresse e-mail** puis
 **Réinitialisation du mot de passe** (crayon) :
 
-- **Nom de l'expéditeur** : `Ma copropriété`
+- **Nom de l'expéditeur** : `Mes copropriétés`
 - **Répondre à** : votre adresse, si vous voulez recevoir les réponses
-- **Objet** : par exemple « Vérifiez votre adresse pour Ma copropriété » et
-  « Nouveau mot de passe pour Ma copropriété »
+- **Objet** : par exemple « Vérifiez votre adresse pour Mes copropriétés » et
+  « Nouveau mot de passe pour Mes copropriétés »
 - **Enregistrer**.
 
 ### 6.5 (Facultatif) Des liens à votre adresse dans ces courriels
@@ -436,7 +436,7 @@ Onglet **Variables** → **New repository variable**, une par ligne :
 | `VITE_FIREBASE_APP_ID` | `appId` (étape 4.1) |
 | `VITE_FIREBASE_VAPID_KEY` | la clé Web Push (étape 4.2) — *phase 2* |
 | `ADRESSE_APP` | **`https://copropriete.ricard.app`** (sans `/` à la fin) — *phase 2* |
-| `EXPEDITEUR` | **`Ma copropriété <copropriete@ricard.app>`** — *phase 2* |
+| `EXPEDITEUR` | **`Mes copropriétés <copropriete@ricard.app>`** — *phase 2* |
 | `DEPLOIEMENT_FIREBASE` | **`tout`** — *phase 2, en dernier* : c'est elle qui autorise le workflow **Firebase** à déployer règles et fonctions |
 
 Des **variables** et non des secrets, sauf le compte de service : ces
@@ -508,6 +508,44 @@ l'enregistrement DNS tout seul.
 
 ✅ **Vérifier** : `https://copropriete.ricard.app` affiche l'écran de
 connexion (les immeubles dont les fenêtres s'allument).
+
+---
+
+## Étape 9 bis — Les pièces jointes (à partir de la 1.5.0)
+
+Les factures, baux et photos sont gardés **sur le NAS**, dans le dossier
+`fichiers/` du projet, par un second conteneur : `copropriete-api`. Il n'a
+aucun secret : il vérifie le jeton de connexion de la personne et demande à
+Firestore si elle est membre de la copropriété.
+
+1. **File Station** → `docker/copropriete` → **Créer → Créer un dossier** →
+   **`fichiers`**. ⚠️ Avant l'étape 3 : sinon Docker le crée lui-même, au
+   nom de root, et File Station ne pourra plus l'ouvrir.
+2. Remplacer **`docker-compose.yml`** par la nouvelle version (celle de ce
+   dossier `deploy/`, qui contient le service `api`). Vérifier le nom après
+   dépôt (traits d'union).
+3. Appliquer le compose par le **Planificateur de tâches** (Container Manager
+   ne sait pas le faire ; voir le README de `NAS_923_infrastructure`) :
+   tâche planifiée, utilisateur **`root`**, *Enregistrer le résultat* coché,
+   script :
+
+   ```sh
+   cd /volume1/docker/copropriete && /usr/local/bin/docker compose -p copropriete up -d --remove-orphans
+   ```
+
+   Cliquer sur le **nom** de la tâche, **Exécuter**, puis *Afficher le
+   résultat*.
+4. ✅ Vérifier : `https://copropriete.ricard.app/api/health` répond
+   `{"ok":true,"version":"…"}` avec la version affichée dans l'application.
+5. **Hyper Backup** : ajouter `docker/copropriete/fichiers` à la sauvegarde.
+   Les pièces jointes n'existent **que** là.
+
+Retour arrière : remettre l'ancien `docker-compose.yml` et relancer la même
+tâche. Le site ne dépend pas de l'API : sans elle, seules les pièces jointes
+cessent de fonctionner.
+
+Aucune route de tunnel à ajouter : le site relaie `/api/` vers l'API par le
+réseau `edge` (`deploy/Caddyfile`).
 
 ---
 

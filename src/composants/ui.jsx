@@ -16,6 +16,7 @@ const TRACES = {
   alerte: 'M12 4l9 16H3zM12 10v4M12 17h.01',
   info: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 11v6M12 7.5h.01',
   copier: 'M9 9h11v11H9zM5 15H4V4h11v1',
+  suivi: 'M9 11l2 2 4-4M7 3h10a2 2 0 0 1 2 2v16l-3-2-2 2-2-2-2 2-2-2-3 2V5a2 2 0 0 1 2-2z',
   crayon: 'M4 20h4L19 9l-4-4L4 16zM13 7l4 4',
 };
 

@@ -90,7 +90,23 @@ await attendu('membre : changer le code', false, () => updateDoc(ref(membre), { 
 await attendu('membre : supprimer la copropriété', false, () => deleteDoc(ref(membre)));
 await attendu('membre : supprimer le code', false, () => deleteDoc(doc(membre.db, 'coproCodes', code)));
 
+// ─── Les paiements confirmés ───
+const paiement = (c, extra = {}) => setDoc(doc(c.db, 'copros', id, 'paiements', 'depense-a-2026-01'), {
+  id: 'depense-a-2026-01', statut: 'paye', sens: 'sortie', montant: 437, mois: '2026-01', pieces: [], ...extra,
+});
+await attendu('membre : confirmer un paiement', true, () => paiement(membre));
+await attendu('membre : lire les paiements', true, () => getDocs(collection(membre.db, 'copros', id, 'paiements')));
+await attendu('étranger : lire les paiements', false, () => getDocs(collection(etranger.db, 'copros', id, 'paiements')));
+await attendu('étranger : écrire un paiement', false, () => paiement(etranger));
+await attendu('paiement au montant négatif', false, () => paiement(membre, { montant: -5 }));
+await attendu('paiement au mois mal formé', false, () => paiement(membre, { mois: '2026-13' }));
+await attendu('paiement dont l\'identifiant ne correspond pas', false, () => paiement(membre, { id: 'autre' }));
+
 // ─── Le gestionnaire ───
+await attendu('membre : se donner une part de propriété', false, () => updateDoc(ref(membre), { [`members.${membre.uid}.propriete`]: 90 }));
+await attendu('gestionnaire : régler les parts de propriété', true, () =>
+  updateDoc(ref(gest), { [`members.${gest.uid}.propriete`]: 50, [`members.${membre.uid}.propriete`]: 50 }));
+await attendu('membre : retenir les intérêts du relevé du prêteur', true, () => updateDoc(ref(membre), { 'interetsDeclares.2026': 1200 }));
 await attendu('gestionnaire : répartir les proportions', true, () =>
   updateDoc(ref(gest), { [`members.${gest.uid}.proportion`]: 60, [`members.${membre.uid}.proportion`]: 40 }));
 await attendu('gestionnaire : céder la gestion à un étranger', false, () => updateDoc(ref(gest), { gestionnaire: etranger.uid }));
@@ -115,6 +131,7 @@ await attendu('membre : partir en emmenant le gestionnaire', false, () =>
 await attendu('membre : partir', true, () =>
   updateDoc(ref(membre), { memberUids: arrayRemove(membre.uid), [`members.${membre.uid}`]: deleteField() }));
 await attendu('ancien membre : lire encore la copropriété', false, () => getDoc(ref(membre)));
+await attendu('ancien membre : lire encore les paiements', false, () => getDocs(collection(membre.db, 'copros', id, 'paiements')));
 await attendu('ancien membre : revenir sans le nouveau code', false, () => entrer(membre, fiche(0, { codeUtilise: code })));
 await attendu('gestionnaire : supprimer la copropriété et son code', true, () => {
   const lot = writeBatch(gest.db);

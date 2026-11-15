@@ -1,13 +1,13 @@
 {
   "name": "ma-copropriete",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "private": true,
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "node functions/copier-calculs.mjs && node --test src/calc/*.test.js functions/src/*.test.js",
+    "test": "node functions/copier-calculs.mjs && node --test src/calc/*.test.js functions/src/*.test.js deploy/api/*.test.mjs",
     "regles": "npx --yes firebase-tools@13 emulators:exec --project demo-copro --only auth,firestore \"node essais/regles.mjs\"",
     "fonctions": "npx --yes firebase-tools@13 emulators:exec --project demo-copro --only auth,firestore,functions \"node essais/fonctions.mjs\""
   },
