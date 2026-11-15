@@ -1,5 +1,10 @@
 # Journal des versions
 
+## 1.2.2 — 15 novembre 2026
+
+- Rien ne change dans l'application : la mise en ligne se fait désormais en
+  deux temps, le site sur le NAS d'abord, Google et les courriels ensuite.
+
 ## 1.2.1 — 15 novembre 2026
 
 - Rien ne change dans l'application : la branche `main` est créée, et le guide

@@ -28,13 +28,33 @@ on:
 
 jobs:
   deployer:
-    # Même logique que web-image.yml : rien sur une poussée tant que le projet
-    # n'est pas configuré ; lancé à la main, il dit ce qui manque.
-    if: vars.FIREBASE_PROJECT_ID != '' || github.event_name == 'workflow_dispatch'
+    # Le dos se met en place en deux temps (deploy/README.md) :
+    #  - d'abord le site sur le NAS avec Firebase au forfait gratuit : les
+    #    règles se collent à la main dans la console, rien ne se déploie d'ici ;
+    #  - puis Blaze, Resend et le compte de déploiement : la variable
+    #    DEPLOIEMENT_FIREBASE vaut alors « regles » ou « tout ».
+    # Sans elle, une poussée ne lance rien plutôt que d'échouer en rouge faute
+    # de compte de déploiement ; lancé à la main, il dit ce qui manque.
+    if: vars.DEPLOIEMENT_FIREBASE == 'regles' || vars.DEPLOIEMENT_FIREBASE == 'tout' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     # Sans plafond, un travail bloqué brûle six heures de forfait.
     timeout-minutes: 20
+    env:
+      AVEC_FONCTIONS: ${{ vars.DEPLOIEMENT_FIREBASE == 'tout' }}
     steps:
+      - name: Vérifier la configuration
+        env:
+          PROJET: ${{ vars.FIREBASE_PROJECT_ID }}
+          CIBLE: ${{ vars.DEPLOIEMENT_FIREBASE }}
+          CLE: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          [ -n "$PROJET" ] || { echo "Variable FIREBASE_PROJECT_ID absente : deploy/README.md, étape 7.3." >&2; exit 1; }
+          [ -n "$CLE" ] || { echo "Secret FIREBASE_SERVICE_ACCOUNT absent : deploy/README.md, étape 7.2." >&2; exit 1; }
+          case "$CIBLE" in
+            regles|tout) ;;
+            *) echo "Variable DEPLOIEMENT_FIREBASE : « regles » ou « tout », pas « $CIBLE »." >&2; exit 1 ;;
+          esac
+
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
@@ -46,27 +66,31 @@ jobs:
         run: printf '%s' "$FIREBASE_SERVICE_ACCOUNT" > "$RUNNER_TEMP/sa.json"
 
       - name: Installer les dépendances des fonctions
+        if: env.AVEC_FONCTIONS == 'true'
         run: npm install --prefix functions
 
       # Les réglages des fonctions qui ne sont pas des secrets. Écrits ici, à
       # partir des variables du dépôt, plutôt que versionnés : le nom de
       # domaine n'est jamais écrit en dur (docs/empreinte-numerique.md).
       - name: Écrire les réglages des fonctions
+        if: env.AVEC_FONCTIONS == 'true'
         env:
           ADRESSE_APP: ${{ vars.ADRESSE_APP }}
           EXPEDITEUR: ${{ vars.EXPEDITEUR }}
         run: |
           if [ -z "$ADRESSE_APP" ] || [ -z "$EXPEDITEUR" ]; then
-            echo "Variables ADRESSE_APP ou EXPEDITEUR absentes : voir deploy/README.md, étape 4." >&2
+            echo "Variables ADRESSE_APP ou EXPEDITEUR absentes : voir deploy/README.md, étape 7.3." >&2
             exit 1
           fi
           # Entre guillemets : l'expéditeur contient des espaces et des chevrons.
           printf 'ADRESSE_APP="%s"\nEXPEDITEUR="%s"\n' "$ADRESSE_APP" "$EXPEDITEUR" > functions/.env
 
-      - name: Déployer les règles et les fonctions
+      - name: Déployer
         env:
           GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/sa.json
-        run: npx --yes firebase-tools@13 deploy --only firestore:rules,functions --project "${{ vars.FIREBASE_PROJECT_ID }}" --non-interactive --force
+        run: |
+          if [ "$AVEC_FONCTIONS" = "true" ]; then CIBLES=firestore:rules,functions; else CIBLES=firestore:rules; fi
+          npx --yes firebase-tools@13 deploy --only "$CIBLES" --project "${{ vars.FIREBASE_PROJECT_ID }}" --non-interactive --force
 
       - name: Effacer la clé
         if: always()
