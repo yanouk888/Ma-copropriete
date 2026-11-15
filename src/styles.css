@@ -80,6 +80,10 @@ button, input, select { font: inherit; color: inherit; }
 
 .entete { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 4px 2px; }
 .entete > div { min-width: 0; }
+.titre-copro { display: inline-flex; align-items: center; gap: 4px; max-width: 100%; padding: 0; border: 0; background: none; cursor: pointer; text-align: left; }
+.titre-copro h1 { min-width: 0; }
+.titre-copro svg { flex: none; color: var(--texte-2); }
+.element[aria-current='true'] { background: color-mix(in srgb, var(--primaire) 8%, transparent); padding-left: 8px; padding-right: 8px; }
 /* Le bouton d'en-tête garde sa largeur : c'est le sous-titre qui passe à la ligne, pas « Logement » qui se coupe en deux. */
 .entete .bouton { flex: none; white-space: nowrap; }
 

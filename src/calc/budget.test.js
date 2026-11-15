@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {
   montantEnVigueur, poserPalier, loyerDuMois, mensualiteDepense, sortieReelle,
   tauxMensuel, deroulerHypotheque, resumeDuMois, planifier, premierMoisNegatif,
+  versementsDuMois, rangVersement, dernierVersement,
 } from './budget.js';
 import { ajouterMois, ecartMois, suiteMois } from './mois.js';
 
@@ -56,6 +57,30 @@ test('dépense ponctuelle : amortie sur douze mois exactement', () => {
   assert.equal(mois.reduce((s, m) => s + sortieReelle(toit, m), 0), 6000);
   // Non amortie : rien dans le fonds, tout dans le compte.
   assert.equal(mensualiteDepense({ ...toit, amortie: false }, '2027-01'), 0);
+});
+
+test('versements : une armoire de 3 600 $ en 36 versements mensuels', () => {
+  const armoire = { type: 'versements', montant: 3600, nombre: 36, frequence: 'mensuel', premier: '2026-12' };
+  assert.equal(mensualiteDepense(armoire, '2026-11'), 0);
+  proche(mensualiteDepense(armoire, '2026-12'), 100);
+  proche(sortieReelle(armoire, '2027-06'), 100);
+  assert.deepEqual(rangVersement(armoire, '2027-06'), { rang: 7, sur: 36 });
+  assert.equal(dernierVersement(armoire), '2029-11');
+  proche(mensualiteDepense(armoire, '2029-11'), 100);
+  assert.equal(mensualiteDepense(armoire, '2029-12'), 0);
+  assert.equal(rangVersement(armoire, '2029-12'), null);
+  // Le total payé est exactement le prix.
+  proche(suiteMois('2026-01', 60).reduce((s, m) => s + sortieReelle(armoire, m), 0), 3600);
+});
+
+test('versements : aux deux semaines, le bon nombre et le bon total', () => {
+  const d = { type: 'versements', montant: 1300, nombre: 26, frequence: 'aux2semaines', premier: '2027-01' };
+  const mois = suiteMois('2027-01', 24);
+  assert.equal(mois.reduce((s, m) => s + versementsDuMois(d, m), 0), 26);
+  // Deux par mois, et un mois à trois : 26 versements tombent en douze mois.
+  assert.ok(mois.slice(0, 12).every((m) => [2, 3].includes(versementsDuMois(d, m))));
+  assert.equal(dernierVersement(d), '2027-12');
+  proche(mois.reduce((s, m) => s + sortieReelle(d, m), 0), 1300);
 });
 
 test('hypothèque : composition semestrielle canadienne', () => {

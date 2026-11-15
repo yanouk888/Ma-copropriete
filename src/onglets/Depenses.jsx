@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react';
 import { useCopro } from '../donnees/Session';
 import {
-  FREQUENCES, CATEGORIES, mensualiteDepense, montantEnVigueur, poserPalier,
+  FREQUENCES, FREQUENCES_VERSEMENTS, CATEGORIES, mensualiteDepense, montantEnVigueur, poserPalier,
+  montantDuVersement, rangVersement, dernierVersement,
   deroulerHypotheque, mensualiteHypotheque, resumeDuMois,
 } from '../calc/budget';
 import { moisDe, libelleMois, ajouterMois, ecartMois } from '../calc/mois';
@@ -17,7 +18,7 @@ function FeuilleDepense({ depense, onFermer }) {
   const mois = moisDe();
   const nouveau = !depense;
   const montantActuel = depense
-    ? depense.type === 'ponctuelle' ? depense.montant : montantEnVigueur(depense.paliers, mois) ?? depense.paliers[0].montant
+    ? depense.type !== 'recurrente' ? depense.montant : montantEnVigueur(depense.paliers, mois) ?? depense.paliers[0].montant
     : '';
   const [type, setType] = useState(depense?.type || 'recurrente');
   const [nom, setNom] = useState(depense?.nom || '');
@@ -30,6 +31,8 @@ function FeuilleDepense({ depense, onFermer }) {
   const [fin, setFin] = useState(depense?.fin || mois);
   const [moisPaiement, setMoisPaiement] = useState(depense?.mois || ajouterMois(mois, 1));
   const [amortie, setAmortie] = useState(depense?.amortie ?? true);
+  const [nombreVersements, setNombreVersements] = useState(depense?.nombre ? String(depense.nombre) : '');
+  const [premier, setPremier] = useState(depense?.premier || mois);
   const [erreur, setErreur] = useState('');
 
   const valeur = montantValide(montant);
@@ -44,7 +47,11 @@ function FeuilleDepense({ depense, onFermer }) {
     if (valeur === null) { setErreur('Entrez un montant plus grand que zéro.'); return; }
     const base = { id: depense?.id || nouvelId(), nom: nom.trim(), categorie, type };
     let suivante;
-    if (type === 'ponctuelle') {
+    if (type === 'versements') {
+      const n = Number(nombreVersements);
+      if (!Number.isInteger(n) || n < 2 || n > 600) { setErreur('Le nombre de versements est un nombre entier, de 2 à 600.'); return; }
+      suivante = { ...base, montant: valeur, nombre: n, frequence: FREQUENCES_VERSEMENTS.includes(frequence) ? frequence : 'mensuel', premier };
+    } else if (type === 'ponctuelle') {
       suivante = {
         ...base, montant: valeur, mois: moisPaiement, amortie,
         // Le début d'amortissement d'une dépense existante ne bouge que si son
@@ -71,20 +78,39 @@ function FeuilleDepense({ depense, onFermer }) {
       <form onSubmit={enregistrer}>
         {nouveau ? (
           <Segments libelle="Type de dépense" valeur={type} onChange={setType}
-            options={[{ valeur: 'recurrente', libelle: 'Récurrente' }, { valeur: 'ponctuelle', libelle: 'Ponctuelle' }]} />
+            options={[{ valeur: 'recurrente', libelle: 'Récurrente' }, { valeur: 'ponctuelle', libelle: 'Ponctuelle' }, { valeur: 'versements', libelle: 'Versements' }]} />
         ) : null}
         <Champ libelle="Nom">
           <input value={nom} onChange={(e) => setNom(e.target.value)} required maxLength={50}
-            placeholder={type === 'ponctuelle' ? 'Remplacement du chauffe-eau' : 'Taxes municipales'} />
+            placeholder={type === 'ponctuelle' ? 'Remplacement du chauffe-eau' : type === 'versements' ? 'Armoire de cuisine' : 'Taxes municipales'} />
         </Champ>
         <Champ libelle="Catégorie">
           <select value={categorie} onChange={(e) => setCategorie(e.target.value)}>
             {CATEGORIES.map((c) => <option key={c}>{c}</option>)}
           </select>
         </Champ>
-        <ChampMontant libelle={type === 'ponctuelle' ? 'Montant' : 'Montant de chaque paiement'} valeur={montant} onChange={setMontant} erreur={erreur} />
+        <ChampMontant libelle={type === 'ponctuelle' ? 'Montant' : type === 'versements' ? 'Montant total' : 'Montant de chaque paiement'} valeur={montant} onChange={setMontant} erreur={erreur} />
 
-        {type === 'recurrente' ? (
+        {type === 'versements' ? (
+          <>
+            <div className="paire">
+              <Champ libelle="Nombre de versements">
+                <input type="text" inputMode="numeric" value={nombreVersements} onChange={(e) => setNombreVersements(e.target.value.replace(/\D/g, ''))} placeholder="36" required />
+              </Champ>
+              <Champ libelle="Fréquence">
+                <select value={FREQUENCES_VERSEMENTS.includes(frequence) ? frequence : 'mensuel'} onChange={(e) => setFrequence(e.target.value)}>
+                  {FREQUENCES_VERSEMENTS.map((f) => <option key={f} value={f}>{FREQUENCES[f].libelle}</option>)}
+                </select>
+              </Champ>
+            </div>
+            <ChampMois libelle="Premier versement" valeur={premier} onChange={setPremier} />
+            {/* Ce que donne la saisie, avant d'enregistrer : la mensualité et le dernier versement. */}
+            {valeur && Number(nombreVersements) >= 2 ? (() => {
+              const essai = { montant: valeur, nombre: Number(nombreVersements), frequence: FREQUENCES_VERSEMENTS.includes(frequence) ? frequence : 'mensuel', premier };
+              return <Avis ton="info">{nombreVersements} versements de <strong>{dollars(montantDuVersement(essai))}</strong>, le dernier en {libelleMois(dernierVersement(essai))}. Ensuite, la dépense s'arrête seule.</Avis>;
+            })() : null}
+          </>
+        ) : type === 'recurrente' ? (
           <>
             <Champ libelle="Fréquence">
               <select value={frequence} onChange={(e) => setFrequence(e.target.value)}>
@@ -198,9 +224,10 @@ export default function Depenses() {
 
   // Récurrentes d'abord, de la plus lourde à la plus légère : ce qui pèse le
   // plus dans le fonds se voit en premier.
-  const recurrentes = copro.depenses.filter((d) => d.type !== 'ponctuelle')
+  const recurrentes = copro.depenses.filter((d) => d.type === 'recurrente' || !d.type)
     .sort((a, b) => mensualiteDepense(b, mois) - mensualiteDepense(a, mois));
   const ponctuelles = copro.depenses.filter((d) => d.type === 'ponctuelle').sort((a, b) => a.mois.localeCompare(b.mois));
+  const enVersements = copro.depenses.filter((d) => d.type === 'versements').sort((a, b) => a.premier.localeCompare(b.premier));
 
   const sousTitre = (d) => {
     if (d.fin && mois > d.fin) return `Terminée depuis ${libelleMois(ajouterMois(d.fin, 1))}`;
@@ -282,6 +309,36 @@ export default function Depenses() {
                 <Icone nom="chevron" taille={18} />
               </button>
             ))}
+          </div>
+        </section>
+      ) : null}
+
+      {enVersements.length ? (
+        <section className="carte">
+          <header><h2>En versements</h2></header>
+          <div className="liste">
+            {enVersements.map((d, i) => {
+              const rang = rangVersement(d, mois);
+              const fin = dernierVersement(d);
+              return (
+                <button className="element" key={d.id} style={{ '--i': i }} onClick={() => setOuverte(d)}>
+                  <TuilePoste poste={posteDe(d.categorie)} />
+                  <div className="corps">
+                    <strong>{d.nom}</strong>
+                    <span className="discret">
+                      {dollars(d.montant)} en {d.nombre} versements · {mois < d.premier ? `dès ${libelleMois(d.premier, { court: true })}`
+                        : mois > fin ? 'payé' : rang ? `versement ${rang.rang} sur ${rang.sur}` : ''}
+                    </span>
+                    {/* La part déjà payée, d'un coup d'œil. */}
+                    <span className="progression" aria-hidden="true" style={{ marginTop: 4 }}>
+                      <span style={{ display: 'block', height: '100%', width: `${Math.min(100, ((mois > fin ? d.nombre : rang?.rang ?? 0) / d.nombre) * 100)}%`, background: 'var(--primaire)', borderRadius: 4 }} />
+                    </span>
+                  </div>
+                  <div className="droite"><strong className="chiffre">{dollars(mensualiteDepense(d, mois))}</strong><span className="discret">ce mois-ci</span></div>
+                  <Icone nom="chevron" taille={18} />
+                </button>
+              );
+            })}
           </div>
         </section>
       ) : null}

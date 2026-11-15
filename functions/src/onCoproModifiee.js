@@ -41,8 +41,10 @@ export const onCoproModifiee = onDocumentUpdated('copros/{coproId}', async (even
   // ─── Nouvelles dépenses, nouveaux logements ───
   const depensesAvant = ids(avant.depenses);
   for (const d of (apres.depenses || []).filter((x) => !depensesAvant.has(x.id))) {
-    const montant = d.type === 'ponctuelle' ? d.montant : d.paliers?.[0]?.montant;
-    aTous(autres, { type: 'depenses', title: `Nouvelle dépense : ${d.nom}`, body: `${dollars(montant)}, ajoutée par ${nomAuteur}.` });
+    // Récurrente : le montant de chaque paiement ; ponctuelle ou en versements : le total.
+    const montant = d.type === 'recurrente' || !d.type ? d.paliers?.[0]?.montant : d.montant;
+    const detail = d.type === 'versements' ? ` en ${d.nombre} versements` : '';
+    aTous(autres, { type: 'depenses', title: `Nouvelle dépense : ${d.nom}`, body: `${dollars(montant)}${detail}, ajoutée par ${nomAuteur}.` });
   }
   const logementsAvant = ids(avant.logements);
   for (const l of (apres.logements || []).filter((x) => !logementsAvant.has(x.id))) {

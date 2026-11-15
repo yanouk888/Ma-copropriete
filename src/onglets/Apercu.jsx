@@ -4,6 +4,7 @@ import { resumeDuMois, planifier, premierMoisNegatif, totalProportions, PAIES } 
 import { moisDe, libelleMois } from '../calc/mois';
 import { dollars, pourcent } from '../donnees/format';
 import { Avis, Vide } from '../composants/ui';
+import { TitreCopro } from '../composants/MesCopros';
 import { Jauge, Nombre, EntreesSorties, Trajectoire, Avatar, couleurSerie } from '../composants/graphiques';
 
 export default function Apercu({ allerA }) {
@@ -16,15 +17,17 @@ export default function Apercu({ allerA }) {
   // La couleur d'un copropriétaire tient à son rang d'arrivée, pas à sa part :
   // elle ne change pas quand les proportions changent.
   const membres = copro.memberUids.filter((u) => copro.members[u]).map((u, i) => ({ uid: u, serie: (i % 7) + 1, ...copro.members[u] }));
-  const rienDeSaisi = !copro.logements.length && !copro.depenses.length && !copro.hypotheque;
+  // Le premier logement existe dès la création, souvent à 0 $ : « rien de
+  // saisi » regarde donc les montants, pas le nombre de logements.
+  const rienDeSaisi = resume.revenus === 0 && !copro.depenses.length && !copro.hypotheque;
   const atteint = resume.taux !== null && resume.manque === 0;
 
   return (
     <>
       <div className="entete">
         <div>
-          <h1>{copro.nom}</h1>
-          <p className="discret">{libelleMois(mois)}</p>
+          {/* Le nom ouvre « Mes copropriétés » : passer à une autre, en ajouter une. */}
+          <TitreCopro sousTitre={libelleMois(mois)} />
         </div>
       </div>
 

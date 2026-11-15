@@ -23,8 +23,12 @@ export const inviterParCourriel = onCall({ secrets: [cleResend] }, async (requet
   if (!COURRIEL.test(a) || a.length > 200) throw new HttpsError('invalid-argument', 'Ce courriel n\'est pas valide.');
 
   const db = getFirestore();
-  const profil = (await db.collection('users').doc(uid).get()).data();
-  const coproId = profil?.coproId;
+  // La copropriété est nommée par l'appelant (on peut en avoir plusieurs) ;
+  // à défaut, celle de son profil, pour les versions de l'application d'avant
+  // la 1.3.0 encore ouvertes sur un téléphone.
+  const coproId = typeof requete.data?.coproId === 'string' && requete.data.coproId
+    ? requete.data.coproId
+    : (await db.collection('users').doc(uid).get()).data()?.coproId;
   if (!coproId) throw new HttpsError('failed-precondition', 'Vous n\'êtes dans aucune copropriété.');
   const copro = (await db.collection('copros').doc(coproId).get()).data();
   if (!copro || !(copro.memberUids || []).includes(uid)) {
