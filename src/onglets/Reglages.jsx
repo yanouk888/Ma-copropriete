@@ -49,10 +49,21 @@ function Inviter() {
   );
 }
 
-function FeuilleProportions({ onFermer }) {
+// Deux répartitions distinctes, réglées par le gestionnaire :
+//  - la proportion : la part de ce qui manque chaque mois que verse chacun ;
+//  - la part de propriété : celle de l'acte, que chacun déclare à l'impôt.
+// Elles diffèrent souvent (50/50 sur l'acte, 60/40 dans les versements).
+const REPARTITIONS = {
+  proportion: { titre: 'Proportions', texte: 'La part de ce qui manque chaque mois que verse chacun. Le total doit faire 100 %.' },
+  propriete: { titre: 'Parts de propriété', texte: 'La part de chacun dans l\'immeuble, selon l\'acte : c\'est elle que chacun déclare à l\'impôt (rapport annuel). Le total doit faire 100 %.' },
+};
+
+function FeuilleProportions({ champ = 'proportion', onFermer }) {
   const { copro, actions } = useSession();
+  const { titre, texte } = REPARTITIONS[champ];
   const [valeurs, setValeurs] = useState(() =>
-    Object.fromEntries(Object.entries(copro.members).map(([uid, m]) => [uid, String(m.proportion).replace('.', ',')])));
+    // Pas encore de part de propriété : on part de la proportion des versements.
+    Object.fromEntries(Object.entries(copro.members).map(([uid, m]) => [uid, String(m[champ] ?? m.proportion).replace('.', ',')])));
   const total = Object.values(valeurs).reduce((s, v) => s + (lireMontant(v) || 0), 0);
   const valide = Math.abs(total - 100) < 0.01 && Object.values(valeurs).every((v) => lireMontant(v) >= 0);
 
@@ -62,14 +73,14 @@ function FeuilleProportions({ onFermer }) {
     // Un chemin par membre (« members.uid.proportion ») : on ne réécrit pas la
     // fiche entière, qu'un autre appareil a pu modifier entre-temps.
     actions.modifier(copro.id, Object.fromEntries(
-      Object.entries(valeurs).map(([uid, v]) => [`members.${uid}.proportion`, Math.round(lireMontant(v) * 100) / 100])));
+      Object.entries(valeurs).map(([uid, v]) => [`members.${uid}.${champ}`, Math.round(lireMontant(v) * 100) / 100])));
     onFermer();
   };
 
   return (
-    <Feuille titre="Proportions" onFermer={onFermer}>
+    <Feuille titre={titre} onFermer={onFermer}>
       <form onSubmit={enregistrer}>
-        <p className="discret">La part de ce qui manque chaque mois que verse chacun. Le total doit faire 100 %.</p>
+        <p className="discret">{texte}</p>
         {Object.entries(copro.members).map(([uid, m]) => (
           <Champ key={uid} libelle={`${m.displayName} (%)`}>
             <input type="text" inputMode="decimal" value={valeurs[uid]} onChange={(e) => setValeurs({ ...valeurs, [uid]: e.target.value })} />
@@ -88,7 +99,7 @@ function FeuilleProportions({ onFermer }) {
 function Coproprietaires() {
   const { copro, user, estGestionnaire, actions } = useSession();
   const toast = useToast();
-  const [proportions, setProportions] = useState(false);
+  const [proportions, setProportions] = useState(null);
   const total = totalProportions(copro);
   const moi = copro.members[user.uid];
 
@@ -107,7 +118,12 @@ function Coproprietaires() {
     <section className="carte">
       <header>
         <h2>Copropriétaires</h2>
-        {estGestionnaire ? <button className="bouton texte" onClick={() => setProportions(true)}>Proportions</button> : null}
+        {estGestionnaire ? (
+          <div className="boutons">
+            <button className="bouton texte" onClick={() => setProportions('proportion')}>Proportions</button>
+            <button className="bouton texte" onClick={() => setProportions('propriete')}>Propriété</button>
+          </div>
+        ) : null}
       </header>
       {Math.abs(total - 100) > 0.01 ? (
         <Avis ton="attention">Les proportions totalisent {Math.round(total * 100) / 100} %. {estGestionnaire ? 'Répartissez-les pour que les versements soient justes.' : 'Le gestionnaire doit les répartir.'}</Avis>
@@ -117,7 +133,7 @@ function Coproprietaires() {
           <div className="element" key={uid} style={{ cursor: 'default', flexWrap: 'wrap' }}>
             <div className="corps">
               <strong>{m.displayName}{uid === user.uid ? ' (vous)' : ''}</strong>
-              <span className="discret">{m.proportion} %{uid === copro.gestionnaire ? ' · gestionnaire' : ''}</span>
+              <span className="discret">Verse {m.proportion} % · propriétaire à {m.propriete ?? m.proportion} %{uid === copro.gestionnaire ? ' · gestionnaire' : ''}</span>
             </div>
             {estGestionnaire && uid !== user.uid ? (
               <div className="boutons">
@@ -133,7 +149,7 @@ function Coproprietaires() {
           {Object.entries(PAIES).map(([cle, p]) => <option key={cle} value={cle}>{p.libelle}</option>)}
         </select>
       </Champ>
-      {proportions ? <FeuilleProportions onFermer={() => setProportions(false)} /> : null}
+      {proportions ? <FeuilleProportions champ={proportions} onFermer={() => setProportions(null)} /> : null}
     </section>
   );
 }

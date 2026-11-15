@@ -1,4 +1,4 @@
-// Service worker de Ma copropriété : il ne fait qu'une chose, afficher les
+// Service worker de Mes copropriétés : il ne fait qu'une chose, afficher les
 // notifications poussées.
 //
 // Il ne charge PAS le SDK Firebase, contrairement à celui de Budget Maison :
@@ -33,7 +33,7 @@ self.addEventListener('push', (event) => {
     // sans notification visible fait révoquer la permission par le navigateur.
   }
   event.waitUntil(
-    self.registration.showNotification(donnees.title || 'Ma copropriété', {
+    self.registration.showNotification(donnees.title || 'Mes copropriétés', {
       body: donnees.body || '',
       icon: '/icons/icon-192.png',
       badge: '/icons/badge.png',

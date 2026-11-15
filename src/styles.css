@@ -126,17 +126,21 @@ button, input, select { font: inherit; color: inherit; }
   border-top: 1px solid var(--trait);
   padding-bottom: env(safe-area-inset-bottom);
 }
-.barre nav { display: grid; grid-template-columns: repeat(5, 1fr); width: 100%; max-width: 720px; }
+.barre nav { display: grid; grid-template-columns: repeat(6, 1fr); width: 100%; max-width: 720px; }
 .barre button {
   height: var(--barre); min-width: 0;
   display: grid; place-items: center; align-content: center; gap: 2px;
   background: none; border: 0; cursor: pointer;
   color: var(--texte-2); font-size: .7rem;
 }
-.barre button span.pastille { display: grid; place-items: center; width: 56px; height: 30px; border-radius: 15px; }
+.barre button span.pastille { display: grid; place-items: center; width: min(56px, 100%); height: 30px; border-radius: 15px; }
 .barre button[aria-current='page'] { color: var(--texte); font-weight: 600; }
 .barre button[aria-current='page'] span.pastille { background: var(--primaire-doux); color: var(--sur-primaire-doux); }
 .barre button span.nom { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 0 2px; }
+/* Six onglets : à 390 px, « Dépenses » était coupé en « Dépen… ». Un cran
+   plus petit et serré, il tient en entier jusqu'à 360 px. */
+.barre button span.nom { font-size: .66rem; letter-spacing: -.01em; padding: 0; }
+@media (max-width: 370px) { .barre button span.nom { font-size: .6rem; letter-spacing: -.02em; } }
 
 /* ───────── Cartes ───────── */
 
@@ -448,11 +452,11 @@ button.element:hover { background: color-mix(in srgb, var(--primaire) 6%, transp
    en dépassant sa cible, elle sortait de l'écran au dernier onglet. */
 .barre nav { position: relative; }
 .barre .glisseur {
-  position: absolute; top: calc((var(--barre) - 48px) / 2); left: 0; width: 20%; height: 30px;
+  position: absolute; top: calc((var(--barre) - 48px) / 2); left: 0; width: calc(100% / 6); height: 30px;
   display: grid; place-items: center; pointer-events: none;
   transform: translateX(calc(var(--position) * 100%)); transition: transform .4s var(--doux);
 }
-.barre .glisseur::before { content: ''; width: 56px; height: 30px; border-radius: 15px; background: var(--primaire-doux); }
+.barre .glisseur::before { content: ''; width: min(56px, 92%); height: 30px; border-radius: 15px; background: var(--primaire-doux); }
 .barre button { position: relative; z-index: 1; }
 .barre button[aria-current='page'] span.pastille { background: none; animation: bond .5s var(--ressort); }
 @keyframes bond { 40% { transform: translateY(-4px) scale(1.12); } }
@@ -511,4 +515,41 @@ dialog.feuille[open]::backdrop { animation: paraît .25s both; }
   .vitrine h1 { font-size: 1.35rem; }
   .vitrine p { font-size: .92rem; }
   .vitrine .illustration { max-height: 64px; }
+}
+
+/* ───────── Pièces jointes ───────── */
+
+.liste-pieces { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.liste-pieces li { display: flex; align-items: center; gap: 4px; }
+.piece {
+  flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; min-height: 48px;
+  padding: 6px 10px; border-radius: 12px; border: 1px solid var(--trait); background: var(--surface); cursor: pointer; text-align: left;
+}
+.piece-type { flex: none; width: 36px; height: 36px; border-radius: 8px; display: grid; place-items: center; font-size: .68rem; font-weight: 800; letter-spacing: .04em; background: var(--primaire-doux); color: var(--sur-primaire-doux); }
+.piece-nom { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pastille-pieces { display: inline-flex; align-items: center; gap: 3px; font-size: .78rem; color: var(--texte-2); }
+
+/* ───────── Rapport annuel ───────── */
+
+.rapport { display: grid; gap: 8px; }
+.rapport h3 { margin-top: 12px; font-size: .95rem; color: var(--texte-2); text-transform: uppercase; letter-spacing: .05em; }
+.tableau-parts { display: grid; gap: 0; font-size: .9rem; }
+.tableau-parts > div { display: grid; grid-template-columns: minmax(0, 1.4fr) .7fr 1fr 1fr 1fr; gap: 6px; padding: 8px 0; border-top: 1px solid var(--trait); }
+.tableau-parts > div > span:not(:first-child) { text-align: right; }
+.tableau-parts > div > span:first-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.tableau-parts .entete-parts { border-top: 0; color: var(--texte-2); font-size: .78rem; }
+.mention { margin-top: 12px; font-size: .82rem; }
+#impression { display: none; }
+
+/* À l'impression, seul le rapport : ni barres, ni fenêtres, ni animations,
+   en noir sur blanc, même si l'appareil est en thème sombre. */
+@media print {
+  body > *:not(#impression) { display: none !important; }
+  #impression { display: block !important; color: #000; background: #fff; padding: 0; }
+  #impression * { color: #000 !important; animation: none !important; }
+  #impression .rapport-entete h1 { font-size: 16pt; margin-bottom: 4pt; }
+  #impression .rapport-entete p { font-size: 9pt; }
+  #impression .ligne { border-color: #bbb; }
+  #impression .ligne, #impression .tableau-parts > div { break-inside: avoid; }
+  @page { margin: 16mm; }
 }

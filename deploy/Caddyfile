@@ -70,6 +70,18 @@
 		}
 	}
 
+	# ─── Pièces jointes ───
+	# Relayées vers l'API du NAS, sous la même adresse que le site : pas de
+	# CORS à régler, et le jeton de connexion ne quitte pas le domaine.
+	# 16 Mo : un peu plus que les 15 Mo qu'accepte l'API, pour que ce soit
+	# elle qui refuse, avec un message lisible.
+	handle /api/* {
+		request_body {
+			max_size 16MB
+		}
+		reverse_proxy copropriete-api:8080
+	}
+
 	# Un fichier haché absent est un ancien bundle que le navigateur réclame
 	# encore : lui renvoyer index.html ferait lire du HTML comme du JavaScript.
 	# Un 404 franc laisse la détection de version faire son travail.

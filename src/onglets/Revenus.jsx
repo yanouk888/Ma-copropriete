@@ -5,6 +5,7 @@ import { moisDe, libelleMois, ajouterMois } from '../calc/mois';
 import { dollars } from '../donnees/format';
 import { nouvelId } from '../donnees/code';
 import { Nombre, Occupation } from '../composants/graphiques';
+import PiecesJointes, { usePiecesJointes } from '../composants/PiecesJointes';
 import { suiteMois } from '../calc/mois';
 import { Feuille, Champ, ChampMontant, ChampMois, Bascule, Icone, Vide, montantValide } from '../composants/ui';
 
@@ -21,6 +22,7 @@ function FeuilleLogement({ logement, onFermer }) {
   const [ferme, setFerme] = useState(Boolean(logement?.fin));
   const [fin, setFin] = useState(logement?.fin || mois);
   const [erreur, setErreur] = useState('');
+  const pieces = usePiecesJointes(copro.id, logement?.pieces || []);
 
   const loyerChange = nouveau || montantValide(loyer, { zeroPermis: true }) !== Number(loyerActuel);
 
@@ -34,11 +36,13 @@ function FeuilleLogement({ logement, onFermer }) {
       paliers: nouveau ? [{ depuis, montant }] : loyerChange ? poserPalier(logement.paliers, depuis, montant) : logement.paliers,
       vacances: [...vacances].sort(),
       fin: ferme ? fin : null,
+      pieces: pieces.pieces,
     };
     // Un changement daté d'avant le premier palier le remplace : il ne reste
     // alors qu'un palier, celui qu'on vient de poser.
     if (!suivant.paliers.length) suivant.paliers = [{ depuis, montant }];
     modifier({ logements: nouveau ? [...copro.logements, suivant] : copro.logements.map((l) => (l.id === suivant.id ? suivant : l)) });
+    pieces.valider();
     onFermer();
   };
 
@@ -82,6 +86,7 @@ function FeuilleLogement({ logement, onFermer }) {
           <button type="button" className="bouton contour" disabled={vacances.includes(moisVacant)}
             onClick={() => setVacances([...vacances, moisVacant])}>Ajouter {libelleMois(moisVacant)}</button>
         </div>
+        <PiecesJointes coproId={copro.id} etat={pieces} libelle="Bail et documents du locataire" aide="Le bail signé, l'avis de renouvellement, l'état des lieux." />
         <Bascule libelle="Ce logement cesse d'être loué" coche={ferme} onChange={setFerme} />
         {ferme ? <ChampMois libelle="Dernier mois de loyer" valeur={fin} onChange={setFin} /> : null}
         <div className="pied">

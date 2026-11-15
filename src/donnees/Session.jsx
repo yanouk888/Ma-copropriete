@@ -7,7 +7,7 @@ import {
 } from 'firebase/auth';
 import {
   doc, collection, onSnapshot, getDoc, getDocs, getDocFromServer, setDoc, query, where, limit, updateDoc, writeBatch,
-  arrayUnion, arrayRemove, deleteField, serverTimestamp,
+  arrayUnion, arrayRemove, deleteField, serverTimestamp, deleteDoc,
 } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
 import { auth, db, fonctions, fournisseurGoogle } from '../firebase';
@@ -31,7 +31,7 @@ const MESSAGES = {
   'auth/cancelled-popup-request': 'La fenêtre Google a été fermée avant la fin.',
   'auth/internal-error': 'La fenêtre Google n\'a pas pu s\'ouvrir. Vérifiez la connexion, puis réessayez.',
   'auth/popup-blocked': 'Le navigateur a bloqué la fenêtre Google. Autorisez les fenêtres pour ce site, puis réessayez.',
-  'auth/credential-already-in-use': 'Ce compte Google sert déjà à un autre compte de Ma copropriété. Connectez-vous avec lui, ou choisissez un autre compte Google.',
+  'auth/credential-already-in-use': 'Ce compte Google sert déjà à un autre compte de l\'application. Connectez-vous avec lui, ou choisissez un autre compte Google.',
   'auth/provider-already-linked': 'Un compte Google est déjà lié à ce compte.',
   'auth/requires-recent-login': 'Par sécurité, déconnectez-vous puis reconnectez-vous avant de faire ce changement.',
   'auth/unauthorized-domain': 'Ce domaine n\'est pas autorisé dans Firebase (Authentication → Settings → Domaines autorisés).',
@@ -200,6 +200,19 @@ export function SessionProvider({ children, surErreur }) {
     );
   }, [user]);
 
+  // Les paiements confirmés de la copropriété ouverte : une sous-collection,
+  // et non un champ du document — des années de factures dépasseraient le
+  // mégaoctet qu'un document Firestore peut contenir.
+  const [paiements, setPaiements] = useState([]);
+  useEffect(() => {
+    if (!copro?.id) { setPaiements([]); return undefined; }
+    return onSnapshot(
+      collection(db, 'copros', copro.id, 'paiements'),
+      (r) => setPaiements(r.docs.map((d) => ({ ...d.data(), id: d.id }))),
+      () => setPaiements([])
+    );
+  }, [copro?.id]);
+
   const actions = useMemo(() => {
     const refProfil = () => doc(db, 'users', auth.currentUser.uid);
     const nomAffiche = () => nomSaisi.current || profilCourant.current?.nom || auth.currentUser.displayName || auth.currentUser.email?.split('@')[0] || 'Copropriétaire';
@@ -256,6 +269,20 @@ export function SessionProvider({ children, surErreur }) {
       motDePasseOublie: (courriel) => sendPasswordResetEmail(auth, courriel),
       deconnexion: () => signOut(auth),
 
+      /**
+       * Enregistre un paiement confirmé (ou « non payé »). Son identifiant
+       * est celui du paiement attendu : le confirmer deux fois réécrit le
+       * même document au lieu d'en créer un second. Non attendu, comme
+       * modifier() : hors ligne, la promesse ne se résout qu'au retour du réseau.
+       */
+      enregistrerPaiement(coproId, paiement) {
+        setDoc(doc(db, 'copros', coproId, 'paiements', paiement.id), { ...paiement, ...trace() })
+          .catch((e) => surErreur?.(messageErreur(e)));
+      },
+      supprimerPaiement(coproId, id) {
+        deleteDoc(doc(db, 'copros', coproId, 'paiements', id)).catch((e) => surErreur?.(messageErreur(e)));
+      },
+
       /** Passer à une autre de ses copropriétés. */
       choisir(id) {
         setDoc(refProfil(), { coproId: id }, { merge: true }).catch((e) => surErreur?.(messageErreur(e)));
@@ -283,6 +310,8 @@ export function SessionProvider({ children, surErreur }) {
             paliers: [{ depuis: moisDe(), montant: Number(loyer) || 0 }],
           }],
           depenses: [],
+          // Le suivi des paiements commence le mois de la création.
+          suiviDepuis: moisDe(),
           hypotheque: null,
           solde: null,
           ajustements: [],
@@ -368,10 +397,10 @@ export function SessionProvider({ children, surErreur }) {
   }, [surErreur]);
 
   const valeur = useMemo(() => ({
-    user, profil, copro, actions, mesCopros,
+    user, profil, copro, actions, mesCopros, paiements,
     pret: user !== undefined && (user === null || (profil !== undefined && copro !== undefined)),
     estGestionnaire: Boolean(user && copro && copro.gestionnaire === user.uid),
-  }), [user, profil, copro, actions, mesCopros]);
+  }), [user, profil, copro, actions, mesCopros, paiements]);
 
   return <Contexte.Provider value={valeur}>{children}</Contexte.Provider>;
 }

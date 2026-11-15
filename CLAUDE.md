@@ -37,6 +37,15 @@ si elle est nécessaire.
   en fonctions pures essayées par `npm test`.
 - `deploy/` — l'image du site, Caddy, le compose du NAS, et le guide de mise
   en ligne (`deploy/README.md`).
+- `deploy/api/` — la petite API qui garde les pièces jointes sur le NAS
+  (factures, baux). Sans dépendance npm et **sans aucun secret** : elle vérifie
+  la signature du jeton Firebase, puis demande le document de la copropriété à
+  Firestore **avec le jeton de la personne** — ce sont les règles Firestore
+  qui disent qui est membre. Garder ce principe : aucune clé de service sur
+  le NAS.
+- `src/calc/suivi.js` — le suivi des paiements réels et le rapport annuel
+  (intitulés du T776 et du TP-128, **sans numéros de ligne** : ils n'ont pas pu
+  être vérifiés à la source et changent selon l'année).
 
 Le document `copros/{id}` porte toute une copropriété. Les montants des loyers
 et des dépenses récurrentes sont des **paliers** `{ depuis, montant }` : on ne
@@ -77,7 +86,8 @@ qui ne change rien à l'écran le dit dans **chacun** de ses points (« Rien ne
 change… ») : la note remonte alors à la dernière vraie nouveauté.
 
 `vite.config.js` injecte le numéro dans le bundle et dans `dist/version.json`.
-Il n'y a pas de `/health` : cette application n'a pas d'API à elle.
+L'API des pièces jointes (`deploy/api`) répond `/api/health` avec ce même
+numéro, lu dans `package.json` au démarrage : rien à reporter à la main.
 
 Si `main` a reçu une autre version entre-temps, prendre le numéro **suivant**
 celui de `main` et placer son entrée au-dessus : un numéro publié ne se
@@ -139,7 +149,7 @@ garde-fou entre une erreur et la production. **Si une vérification échoue, on
 ne fusionne pas** : on corrige d'abord.
 
 ```
-npm test          # les calculs et le contenu des courriels
+npm test          # les calculs, le contenu des courriels et l'API des fichiers
 npm run build
 npm run regles    # les règles Firestore, contre l'émulateur (si elles ont changé)
 npm run fonctions # les fonctions de courriel, contre l'émulateur (si elles ont changé)

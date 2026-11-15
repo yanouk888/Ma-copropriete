@@ -1,0 +1,67 @@
+# Construit l'image de l'API des pièces jointes et la publie sur GHCR.
+# Watchtower l'installe sur le NAS, comme celle du site.
+name: Image de l'API
+
+on:
+  push:
+    branches: [main]
+    # Seulement quand l'API peut avoir changé. package.json compte : son
+    # numéro est celui que répond /api/health.
+    paths:
+      - "deploy/api/**"
+      - "deploy/api.Dockerfile"
+      - "package.json"
+      - ".github/workflows/api-image.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  construire:
+    # Comme web-image.yml : rien tant que le projet n'est pas configuré.
+    if: vars.FIREBASE_PROJECT_ID != '' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      # Les essais de l'API avant de publier : une API qui laisserait passer
+      # un non-membre ne doit jamais atteindre le NAS.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Essayer l'API
+        run: node --test deploy/api/serveur.test.mjs
+
+      - name: Se connecter au registre
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Lire le numéro de version
+        id: version
+        run: echo "valeur=$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Construire et publier
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./deploy/api.Dockerfile
+          push: true
+          build-args: |
+            PROJET_FIREBASE=${{ vars.FIREBASE_PROJECT_ID }}
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/copropriete-api:latest
+            ghcr.io/${{ github.repository_owner }}/copropriete-api:${{ steps.version.outputs.valeur }}
+            ghcr.io/${{ github.repository_owner }}/copropriete-api:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
