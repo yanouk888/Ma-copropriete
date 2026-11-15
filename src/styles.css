@@ -112,9 +112,6 @@ button, input, select { font: inherit; color: inherit; }
 
 .entete { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 4px 2px; }
 .entete > div { min-width: 0; }
-.titre-copro { display: inline-flex; align-items: center; gap: 4px; max-width: 100%; padding: 0; border: 0; background: none; cursor: pointer; text-align: left; }
-.titre-copro h1 { min-width: 0; }
-.titre-copro svg { flex: none; color: var(--texte-2); }
 .element[aria-current='true'] { background: color-mix(in srgb, var(--primaire) 8%, transparent); padding-left: 8px; padding-right: 8px; }
 /* Le bouton d'en-tête garde sa largeur : c'est le sous-titre qui passe à la ligne, pas « Logement » qui se coupe en deux. */
 .entete .bouton { flex: none; white-space: nowrap; }
@@ -281,7 +278,6 @@ dialog.feuille::backdrop { background: rgba(0, 0, 0, .45); }
   z-index: 20; max-width: calc(100vw - 32px); padding: 12px 16px; border-radius: 12px;
   background: var(--texte); color: var(--fond); box-shadow: var(--ombre);
 }
-.bandeau { background: var(--primaire-doux); color: var(--sur-primaire-doux); padding: 10px 16px; display: flex; gap: 10px; align-items: center; justify-content: center; flex-wrap: wrap; text-align: center; }
 .code { font: 600 1.3rem/1.2 ui-monospace, 'SF Mono', Menlo, Consolas, monospace; letter-spacing: .06em; }
 .notes ul { padding-left: 20px; margin: 6px 0; display: grid; gap: 6px; }
 .notes p { margin: 6px 0; }
@@ -478,7 +474,6 @@ dialog.feuille[open]::backdrop { animation: paraît .25s both; }
 .avis { animation: arrive .4s var(--doux) both; }
 .progression > div { animation: pousse .9s var(--doux) both; transform-origin: left; transition: width .6s var(--doux); }
 .puce { animation: arrive .3s var(--ressort) both; }
-.bandeau { animation: glisse .4s var(--doux) both; }
 
 /* ───────── Connexion ───────── */
 
@@ -553,3 +548,40 @@ dialog.feuille[open]::backdrop { animation: paraît .25s both; }
   #impression .ligne, #impression .tableau-parts > div { break-inside: avoid; }
   @page { margin: 16mm; }
 }
+
+/* ───────── Pastille « L'application a été mise à jour » ───────── */
+/* Reprise de Budget Maison, pour que les applications se ressemblent. */
+
+.avis-maj-cadre {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 30;
+  display: flex; justify-content: center;
+  padding: calc(env(safe-area-inset-top, 0px) + 12px) 16px 0;
+  pointer-events: none;
+}
+.avis-maj {
+  pointer-events: auto; cursor: pointer; user-select: none;
+  display: flex; align-items: center; gap: 12px; max-width: 100%;
+  padding: 6px 20px 6px 6px; border-radius: 999px;
+  border: 1px solid var(--trait); background: var(--surface); color: var(--texte);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, .14); font-weight: 600; font-size: .92rem;
+}
+.avis-maj-icone { flex: none; width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; background: var(--primaire-doux); color: var(--sur-primaire-doux); }
+.avis-maj.entre { animation: avis-maj-descend 360ms cubic-bezier(.2, .9, .3, 1.15) both; }
+.avis-maj.sort { animation: avis-maj-remonte 320ms cubic-bezier(.4, 0, 1, 1) both; }
+@keyframes avis-maj-descend { from { opacity: 0; transform: translateY(calc(-100% - 16px - env(safe-area-inset-top, 0px))); } }
+@keyframes avis-maj-remonte { to { opacity: 0; transform: translateY(calc(-100% - 16px - env(safe-area-inset-top, 0px))); } }
+/* « Réduire les animations » : un fondu bref, qui garde son animationend (c'est lui qui retire la pastille). */
+@media (prefers-reduced-motion: reduce) {
+  .avis-maj.entre { animation: paraît 150ms ease-out both !important; animation-duration: 150ms !important; }
+  .avis-maj.sort { animation: avis-maj-fondu 150ms ease-in both !important; animation-duration: 150ms !important; }
+  @keyframes avis-maj-fondu { to { opacity: 0; } }
+}
+
+/* Les logements de la copropriété, sous le titre de l'aperçu : des pastilles
+   qui mènent à Revenus. */
+.logements-apercu { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.logements-apercu button {
+  display: inline-flex; align-items: baseline; gap: 8px; max-width: 100%; min-height: 36px;
+  padding: 6px 12px; border-radius: 999px; border: 1px solid var(--trait); background: var(--surface); cursor: pointer;
+}
+.logements-apercu .nom { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }

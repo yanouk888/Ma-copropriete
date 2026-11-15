@@ -1,5 +1,17 @@
 # Journal des versions
 
+## 1.5.1 — 15 novembre 2026
+
+- **L'application se met à jour toute seule**, comme Budget Maison : à
+  l'ouverture, ou au retour après plus d'une minute ailleurs. Plus de
+  bandeau « Mettre à jour » à toucher.
+- **Une pastille « L'application a été mise à jour »** descend du haut de
+  l'écran, quelques secondes, après chaque mise à jour. Touchez-la ou
+  glissez-la vers le haut pour la renvoyer.
+- **L'aperçu ne répète plus le nom de la copropriété** : il est dans la barre
+  du haut. Sous le titre « Aperçu », les logements de la copropriété, chacun
+  avec son loyer du mois.
+
 ## 1.5.0 — 15 novembre 2026
 
 - **L'application s'appelle maintenant « Mes copropriétés »** : un compte peut

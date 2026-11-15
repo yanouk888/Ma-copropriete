@@ -1,11 +1,10 @@
 import { useMemo } from 'react';
 import { useSession } from '../donnees/Session';
-import { resumeDuMois, planifier, premierMoisNegatif, totalProportions, PAIES } from '../calc/budget';
+import { resumeDuMois, planifier, premierMoisNegatif, totalProportions, PAIES, loyerDuMois } from '../calc/budget';
 import { aConfirmer } from '../calc/suivi';
 import { moisDe, libelleMois } from '../calc/mois';
 import { dollars, pourcent } from '../donnees/format';
 import { Avis, Vide } from '../composants/ui';
-import { TitreCopro } from '../composants/MesCopros';
 import { Jauge, Nombre, EntreesSorties, Trajectoire, Avatar, couleurSerie } from '../composants/graphiques';
 
 export default function Apercu({ allerA }) {
@@ -27,9 +26,27 @@ export default function Apercu({ allerA }) {
   return (
     <>
       <div className="entete">
+        {/* La copropriété est nommée dans la barre titre ; la répéter ici
+            faisait doublon (remarqué sur téléphone). Sous le titre, ses
+            logements, chacun avec son loyer du mois. */}
         <div>
-          {/* Le nom ouvre « Mes copropriétés » : passer à une autre, en ajouter une. */}
-          <TitreCopro sousTitre={libelleMois(mois)} />
+          <h1>Aperçu</h1>
+          <p className="discret">{libelleMois(mois)}</p>
+          {copro.logements.length ? (
+            <ul className="logements-apercu">
+              {copro.logements.map((l) => {
+                const loyer = loyerDuMois(l, mois);
+                return (
+                  <li key={l.id}>
+                    <button type="button" onClick={() => allerA('revenus')}>
+                      <span className="nom">{l.nom}</span>
+                      <span className="chiffre discret">{loyer > 0 ? dollars(loyer) : (l.vacances || []).includes(mois) ? 'vacant' : 'non loué'}</span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          ) : null}
         </div>
       </div>
 
