@@ -32,6 +32,11 @@ concurrency:
 
 jobs:
   construire:
+    # Tant que la configuration Firebase n'est pas saisie (deploy/README.md,
+    # étape 7.3), une poussée sur main ne construit rien plutôt que d'échouer
+    # en rouge. Lancé à la main, il construit quand même : le message d'erreur
+    # dit alors ce qui manque.
+    if: vars.FIREBASE_PROJECT_ID != '' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     # Sans plafond, un travail bloqué brûle six heures de forfait.
     timeout-minutes: 20

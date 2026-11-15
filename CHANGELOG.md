@@ -1,5 +1,10 @@
 # Journal des versions
 
+## 1.2.1 — 15 novembre 2026
+
+- Rien ne change dans l'application : la branche `main` est créée, et le guide
+  de mise en ligne explique comment en faire la branche par défaut.
+
 ## 1.2.0 — 15 novembre 2026
 
 - **Inviter par courriel.** Sous Réglages → Inviter, entrez une adresse : la

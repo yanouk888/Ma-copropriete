@@ -336,14 +336,19 @@ dans le coffre de Google, où seules les fonctions la lisent.
 
 ## Étape 7 — GitHub
 
-### 7.1 La branche `main`
+### 7.1 La branche par défaut
 
-Le dépôt n'a pour l'instant qu'une branche, `claude/copropriete-budget-app-83z7sa`.
-Les workflows ne se déclenchent que sur `main`.
+La branche `main` existe ; c'est elle que déploient les workflows. Mais la
+branche **par défaut** du dépôt est encore `claude/copropriete-budget-app-83z7sa`,
+la première poussée.
 
 1. **GitHub → yanouk888/Ma-copropriete → Settings → General**.
-2. Section **Default branch** → crayon à côté du nom de la branche →
-   **Rename** en **`main`**.
+2. Section **Default branch** → icône des deux flèches (*Switch to another
+   branch*) → choisir **`main`** → **Update** → confirmer.
+
+Sans cela, l'onglet Actions et les pull requests partent de la mauvaise
+branche. Tant que la configuration n'est pas saisie (7.3), une poussée sur
+`main` ne construit rien : les workflows attendent, sans échouer.
 
 ### 7.2 Le compte de déploiement
 

@@ -28,7 +28,9 @@ on:
 
 jobs:
   deployer:
-    if: vars.FIREBASE_PROJECT_ID != ''
+    # Même logique que web-image.yml : rien sur une poussée tant que le projet
+    # n'est pas configuré ; lancé à la main, il dit ce qui manque.
+    if: vars.FIREBASE_PROJECT_ID != '' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     # Sans plafond, un travail bloqué brûle six heures de forfait.
     timeout-minutes: 20
