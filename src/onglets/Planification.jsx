@@ -121,7 +121,7 @@ export default function Planification() {
   return (
     <>
       <div className="entete">
-        <div><h1>Planification</h1><p className="discret">Le compte sur 13 mois</p></div>
+        <div><p className="discret">Le compte sur 13 mois</p></div>
         <button className="bouton" onClick={() => setAjustement(null)}><Icone nom="plus" taille={18} />Ajustement</button>
       </div>
 

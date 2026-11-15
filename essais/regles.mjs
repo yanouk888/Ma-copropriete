@@ -140,6 +140,23 @@ await attendu('gestionnaire : supprimer la copropriété et son code', true, () 
   return lot.commit();
 });
 
+// ─── La cloche ───
+// La notification est posée comme le ferait une fonction : par l'API REST de
+// l'émulateur, avec le jeton « owner » qui passe outre les règles.
+const notif = doc(gest.db, 'users', gest.uid, 'notifications', 'n1');
+await fetch(`http://127.0.0.1:8080/v1/projects/demo-copro/databases/(default)/documents/users/${gest.uid}/notifications?documentId=n1`, {
+  method: 'POST', headers: { Authorization: 'Bearer owner', 'Content-Type': 'application/json' },
+  body: JSON.stringify({ fields: { title: { stringValue: 'Essai' }, body: { stringValue: '' }, read: { booleanValue: false } } }),
+});
+await attendu('cloche : lire ses notifications', true, () => getDocs(collection(gest.db, 'users', gest.uid, 'notifications')));
+await attendu('cloche : marquer comme lue', true, () => updateDoc(notif, { read: true }));
+await attendu('cloche : réécrire le titre', false, () => updateDoc(notif, { title: 'Faux' }));
+await attendu('cloche : se créer une notification', false, () =>
+  setDoc(doc(gest.db, 'users', gest.uid, 'notifications', 'n2'), { title: 'Faux', body: '', read: false }));
+await attendu('étranger : lire les notifications d\'un autre', false, () => getDocs(collection(etranger.db, 'users', gest.uid, 'notifications')));
+await attendu('étranger : marquer celles d\'un autre', false, () => updateDoc(doc(etranger.db, 'users', gest.uid, 'notifications', 'n1'), { read: false }));
+await attendu('cloche : effacer une notification', true, () => deleteDoc(notif));
+
 for (const c of [gest, membre, etranger]) { await terminate(c.db); await deleteApp(c.app); }
 console.log(echecs ? `\n${echecs} échec(s)` : '\nToutes les règles se comportent comme prévu.');
 process.exit(echecs ? 1 : 0);

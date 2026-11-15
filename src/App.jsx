@@ -5,7 +5,10 @@ import { Icone, Toasts, useToast } from './composants/ui';
 import Connexion from './pages/Connexion';
 import Logo from './composants/Logo';
 import AvisMiseAJour from './composants/AvisMiseAJour';
-import { PastilleCopro } from './composants/MesCopros';
+import { FeuilleMesCopros } from './composants/MesCopros';
+import Cloche from './composants/Cloche';
+import MenuProfil from './composants/MenuProfil';
+import { signalerPrete } from './donnees/amorce';
 import Bienvenue from './pages/Bienvenue';
 import Apercu from './onglets/Apercu';
 import Revenus from './onglets/Revenus';
@@ -14,18 +17,30 @@ import Planification from './onglets/Planification';
 import Suivi from './onglets/Suivi';
 import Reglages from './onglets/Reglages';
 
+// L'ordre de ce tableau est celui de la navigation. Comme Budget Maison :
+// quatre destinations dans la barre du bas, les autres sous « Plus », dans
+// une feuille qui dit en une ligne à quoi chacune sert.
 const ONGLETS = [
-  { cle: 'apercu', nom: 'Aperçu', Ecran: Apercu },
-  { cle: 'revenus', nom: 'Revenus', Ecran: Revenus },
-  { cle: 'depenses', nom: 'Dépenses', Ecran: Depenses },
-  { cle: 'planification', nom: 'Planifier', Ecran: Planification },
-  { cle: 'suivi', nom: 'Suivi', Ecran: Suivi },
-  { cle: 'reglages', nom: 'Réglages', Ecran: Reglages },
+  { cle: 'apercu', nom: 'Aperçu', titre: 'Aperçu', Ecran: Apercu },
+  { cle: 'revenus', nom: 'Revenus', titre: 'Revenus', Ecran: Revenus },
+  { cle: 'depenses', nom: 'Dépenses', titre: 'Dépenses', Ecran: Depenses },
+  { cle: 'suivi', nom: 'Suivi', titre: 'Suivi', Ecran: Suivi },
+  { cle: 'planification', nom: 'Planifier', titre: 'Planification', Ecran: Planification, plus: 'Le solde du compte sur 13 mois, et les ajustements' },
+  { cle: 'reglages', nom: 'Réglages', titre: 'Réglages', Ecran: Reglages, plus: 'Profil, copropriétaires, invitation, notifications' },
 ];
+const DANS_LA_BARRE = ONGLETS.filter((o) => !o.plus);
+const SOUS_PLUS = ONGLETS.filter((o) => o.plus);
 
 function Coquille() {
-  const [onglet, setOnglet] = useState('apercu');
-  const { Ecran } = ONGLETS.find((o) => o.cle === onglet);
+  // « reglages:profil » ouvre Réglages sur un sous-onglet (menu de l'avatar).
+  const [cible, setCible] = useState('apercu');
+  const [onglet, sousOnglet] = cible.split(':');
+  const [plus, setPlus] = useState(false);
+  const [copros, setCopros] = useState(false);
+  const { copro } = useSession();
+  const courant = ONGLETS.find((o) => o.cle === onglet);
+  const { Ecran } = courant;
+  const allerA = (c) => { setPlus(false); setCible(c); };
   // Arrivé par une invitation, le code reste dans l'adresse jusqu'ici. On
   // l'efface dès que la copropriété s'affiche — pas après la confirmation du
   // serveur, qui arrive parfois après l'affichage — pour que recharger ou
@@ -34,37 +49,79 @@ function Coquille() {
     if (window.location.search) window.history.replaceState(null, '', window.location.pathname);
   }, []);
   // Chaque onglet s'ouvre en haut de page, pas là où le précédent était rendu.
-  useEffect(() => { window.scrollTo(0, 0); }, [onglet]);
+  useEffect(() => { window.scrollTo(0, 0); }, [cible]);
+  // La pilule : sur l'onglet ouvert, ou sur « Plus » s'il porte la page.
+  const rang = DANS_LA_BARRE.findIndex((o) => o.cle === onglet);
+  const rangPilule = rang >= 0 ? rang : DANS_LA_BARRE.length;
+  const plusActif = plus || rang < 0;
   return (
     <>
-      {/* La barre titre reste en haut à tous les écrans : la marque, et la
-          copropriété ouverte — sur Revenus ou Dépenses, rien d'autre ne
-          disait de laquelle il s'agit. */}
+      {/* La barre du haut, comme Budget Maison : le titre de la page ouverte —
+          pas le nom de l'application, qui ne dit jamais où l'on est — et,
+          dessous, la copropriété ouverte, qu'on touche pour en changer. À
+          droite, la cloche et l'avatar. */}
       <header className="barre-titre">
         <div className="barre-titre-contenu">
-          <span className="marque-app"><Logo taille={30} /><span>Mes copropriétés</span></span>
-          <PastilleCopro />
+          <div className="titre-page">
+            <Logo taille={36} />
+            <div className="titre-page-textes">
+              <span className="titre-page-nom">{courant.titre}</span>
+              <button type="button" className="titre-page-copro" onClick={() => setCopros(true)} aria-haspopup="dialog"
+                aria-label={`Copropriété ouverte : ${copro.nom}. Changer de copropriété`}>
+                <span>{copro.nom}</span>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+              </button>
+            </div>
+          </div>
+          <div className="actions-entete">
+            <Cloche />
+            <MenuProfil allerA={allerA} />
+          </div>
         </div>
       </header>
+      {copros ? <FeuilleMesCopros onFermer={() => setCopros(false)} /> : null}
       {/* La clé remonte l'écran à chaque changement d'onglet : c'est ce qui rejoue l'arrivée des cartes. */}
-      <main className="page" key={onglet}><Ecran allerA={setOnglet} /></main>
+      <main className="page" key={cible}><Ecran allerA={allerA} sousOnglet={sousOnglet} /></main>
       <div className="barre">
         <nav aria-label="Sections">
-          <span className="glisseur" style={{ '--position': ONGLETS.findIndex((o) => o.cle === onglet) }} aria-hidden="true" />
-          {ONGLETS.map((o) => (
-            <button key={o.cle} type="button" aria-current={o.cle === onglet ? 'page' : undefined} onClick={() => setOnglet(o.cle)}>
+          <span className="glisseur" style={{ '--position': rangPilule }} aria-hidden="true" />
+          {DANS_LA_BARRE.map((o) => (
+            <button key={o.cle} type="button" aria-current={o.cle === onglet && !plus ? 'page' : undefined} onClick={() => allerA(o.cle)}>
               <span className="pastille"><Icone nom={o.cle} /></span>
               <span className="nom">{o.nom}</span>
             </button>
           ))}
+          <button type="button" aria-current={plusActif ? 'page' : undefined} aria-expanded={plus} onClick={() => setPlus(!plus)} aria-label="Plus de pages">
+            <span className="pastille"><Icone nom="plus-pages" /></span>
+            <span className="nom">Plus</span>
+          </button>
         </nav>
       </div>
+      {plus ? (
+        <>
+          <div className="voile-plus" onClick={() => setPlus(false)} />
+          <div className="feuille-plus" role="dialog" aria-label="Autres pages">
+            <div className="poignee" />
+            <div className="menu-titre">Autres pages</div>
+            {SOUS_PLUS.map((o, i) => (
+              <button key={o.cle} type="button" className={`element plus-item${o.cle === onglet ? ' actif' : ''}`} style={{ '--i': i }} onClick={() => allerA(o.cle)}>
+                <span className="tuile" style={{ '--teinte': 'var(--primaire)' }}><Icone nom={o.cle} /></span>
+                <div className="corps"><strong>{o.titre}</strong><span className="discret">{o.plus}</span></div>
+                <Icone nom="chevron" taille={18} />
+              </button>
+            ))}
+          </div>
+        </>
+      ) : null}
     </>
   );
 }
 
 function Aiguillage() {
   const { pret, user, copro } = useSession();
+  // L'écran d'amorçage part quand un vrai écran est prêt : connexion,
+  // accueil ou copropriété. Pas sur « Chargement… ».
+  useEffect(() => { if (pret) signalerPrete(); }, [pret]);
   if (!pret) return <div className="centre"><p className="discret" role="status">Chargement…</p></div>;
   if (!user) return <Connexion />;
   if (!copro) return <Bienvenue />;
@@ -78,6 +135,7 @@ function AvecSession() {
 
 export default function App() {
   if (!configure) {
+    signalerPrete();
     return (
       <div className="centre">
         <div className="carte">

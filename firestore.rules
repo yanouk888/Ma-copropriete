@@ -12,6 +12,17 @@ service cloud.firestore {
     // ─────────────────────────────────────────────────────────
     match /users/{userId} {
       allow read, write: if connecte() && uid() == userId;
+
+      // L'historique de la cloche : seules les fonctions l'écrivent. Son
+      // titulaire le lit, l'efface, et ne peut changer que « lu » — sinon un
+      // compte pourrait se fabriquer de fausses alertes qui paraissent venir
+      // de la copropriété.
+      match /notifications/{notifId} {
+        allow read, delete: if connecte() && uid() == userId;
+        allow update: if connecte() && uid() == userId
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read'])
+          && request.resource.data.read is bool;
+      }
     }
 
     // ─────────────────────────────────────────────────────────

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { apresAmorce } from '../donnees/amorce';
 
 // La pastille « L'application a été mise à jour », reprise de Budget Maison.
 //
@@ -29,9 +30,14 @@ export default function AvisMiseAJour() {
     const vue = lireVue();
     noterVue();
     if (!vue || vue === VERSION || VERSION === '0.0.0') return undefined;
-    // Un court délai : la page paraît d'abord, la pastille descend dessus.
-    const t = setTimeout(() => setEtat((e) => (e === 'cachee' ? 'entre' : e)), 400);
-    return () => clearTimeout(t);
+    // Après l'écran d'amorçage, qui la cacherait, puis un court délai : la
+    // page paraît d'abord, la pastille descend dessus.
+    let t;
+    let fini = false;
+    apresAmorce().then(() => {
+      if (!fini) t = setTimeout(() => setEtat((e) => (e === 'cachee' ? 'entre' : e)), 400);
+    });
+    return () => { fini = true; clearTimeout(t); };
   }, []);
 
   const fermer = useCallback(() => setEtat((e) => (e === 'entre' ? 'sort' : e)), []);

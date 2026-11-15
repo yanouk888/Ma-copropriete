@@ -251,7 +251,7 @@ export default function Depenses() {
   return (
     <>
       <div className="entete">
-        <div><h1>Dépenses</h1><p className="discret">Ce que la copropriété coûte</p></div>
+        <div><p className="discret">Ce que la copropriété coûte</p></div>
         <button className="bouton" onClick={() => setOuverte(null)}><Icone nom="plus" taille={18} />Dépense</button>
       </div>
 

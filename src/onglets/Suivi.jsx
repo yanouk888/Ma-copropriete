@@ -171,7 +171,7 @@ export default function Suivi() {
   return (
     <>
       <div className="entete">
-        <div><h1>Suivi</h1><p className="discret">Ce qui a vraiment été payé et reçu</p></div>
+        <div><p className="discret">Ce qui a vraiment été payé et reçu</p></div>
         <button className="bouton" onClick={() => setOuvert({})}><Icone nom="plus" taille={18} />Paiement</button>
       </div>
 
