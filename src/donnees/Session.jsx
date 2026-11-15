@@ -11,7 +11,8 @@ import {
 } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
 import { auth, db, fonctions, fournisseurGoogle } from '../firebase';
-import { nouveauCode, normaliserCode, codeValide } from './code';
+import { nouveauCode, normaliserCode, codeValide, nouvelId } from './code';
+import { moisDe } from '../calc/mois';
 
 const Contexte = createContext(null);
 export const useSession = () => useContext(Contexte);
@@ -173,6 +174,26 @@ export function SessionProvider({ children, surErreur }) {
     return () => { actif = false; minuteries.forEach(clearTimeout); arreter(); };
   }, [user, profil === undefined, coproId, relance]);
 
+  // Toutes les copropriétés dont on est membre : un même compte peut détenir
+  // un logement avec B et un autre avec C. Chacune reste un document à part,
+  // pour que B ne voie jamais les chiffres de A avec C — les règles Firestore
+  // protègent un document entier, pas une partie.
+  //
+  // La requête « memberUids contient moi » passe les règles par construction :
+  // elle ne peut rendre que des copropriétés dont on est membre.
+  const [mesCopros, setMesCopros] = useState([]);
+  const mesCoprosRef = useRef(mesCopros);
+  mesCoprosRef.current = mesCopros;
+  useEffect(() => {
+    if (!user) { setMesCopros([]); return undefined; }
+    return onSnapshot(
+      query(collection(db, 'copros'), where('memberUids', 'array-contains', user.uid)),
+      (r) => setMesCopros(r.docs.map((d) => ({ id: d.id, ...d.data() })).sort((a, b) => a.nom.localeCompare(b.nom, 'fr'))),
+      // La liste ne sert qu'au sélecteur : une erreur ici ne doit rien bloquer.
+      () => {}
+    );
+  }, [user]);
+
   const actions = useMemo(() => {
     const refProfil = () => doc(db, 'users', auth.currentUser.uid);
     const nomAffiche = () => nomSaisi.current || profilCourant.current?.nom || auth.currentUser.displayName || auth.currentUser.email?.split('@')[0] || 'Copropriétaire';
@@ -202,14 +223,26 @@ export function SessionProvider({ children, surErreur }) {
       renvoyerVerification: () => sendEmailVerification(auth.currentUser),
 
       /** Envoie le code d'invitation par courriel, par une fonction : la clé Resend reste au serveur. */
-      async inviterParCourriel(courriel) {
-        await httpsCallable(fonctions, 'inviterParCourriel')({ courriel });
+      async inviterParCourriel(coproId, courriel) {
+        // La copropriété est nommée : avec plusieurs, celle du profil pourrait
+        // avoir changé sur un autre appareil entre-temps.
+        await httpsCallable(fonctions, 'inviterParCourriel')({ coproId, courriel });
       },
       google: () => signInWithPopup(auth, fournisseurGoogle),
       motDePasseOublie: (courriel) => sendPasswordResetEmail(auth, courriel),
       deconnexion: () => signOut(auth),
 
-      async creerCopro(nom) {
+      /** Passer à une autre de ses copropriétés. */
+      choisir(id) {
+        setDoc(refProfil(), { coproId: id }, { merge: true }).catch((e) => surErreur?.(messageErreur(e)));
+      },
+
+      /**
+       * Crée la copropriété et son premier logement, sous le même nom : le nom
+       * d'une copropriété est d'ordinaire l'adresse de l'immeuble, et la
+       * redemander pour le logement faisait écrire deux fois la même chose.
+       */
+      async creerCopro(nom, loyer = 0) {
         const uid = auth.currentUser.uid;
         const ref = doc(collection(db, 'copros'));
         const code = nouveauCode();
@@ -221,7 +254,10 @@ export function SessionProvider({ children, surErreur }) {
           gestionnaire: uid,
           memberUids: [uid],
           members: { [uid]: { displayName: nomAffiche(), proportion: 100, frequencePaie: 'mensuel' } },
-          logements: [],
+          logements: [{
+            id: nouvelId(), nom, vacances: [], fin: null,
+            paliers: [{ depuis: moisDe(), montant: Number(loyer) || 0 }],
+          }],
           depenses: [],
           hypotheque: null,
           solde: null,
@@ -245,6 +281,12 @@ export function SessionProvider({ children, surErreur }) {
         if (!trouve.exists()) throw new Error('Aucune copropriété ne porte ce code.');
         const uid = auth.currentUser.uid;
         const id = trouve.data().coproId;
+        // Déjà membre : on y va, simplement. Les règles refuseraient d'y
+        // entrer une seconde fois, et le message parlerait d'un code périmé.
+        if (mesCoprosRef.current.some((c) => c.id === id)) {
+          await setDoc(refProfil(), { coproId: id }, { merge: true });
+          return;
+        }
         // On écrit sans avoir lu la copropriété : les règles ne laissent pas
         // un non-membre la lire, et arrayUnion comme le chemin « members.uid »
         // s'en passent. Le code présenté est vérifié par les règles.
@@ -302,10 +344,10 @@ export function SessionProvider({ children, surErreur }) {
   }, [surErreur]);
 
   const valeur = useMemo(() => ({
-    user, profil, copro, actions,
+    user, profil, copro, actions, mesCopros,
     pret: user !== undefined && (user === null || (profil !== undefined && copro !== undefined)),
     estGestionnaire: Boolean(user && copro && copro.gestionnaire === user.uid),
-  }), [user, profil, copro, actions]);
+  }), [user, profil, copro, actions, mesCopros]);
 
   return <Contexte.Provider value={valeur}>{children}</Contexte.Provider>;
 }

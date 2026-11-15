@@ -24,7 +24,7 @@ function Inviter() {
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(courriel.trim())) { toast('Ce courriel n\'est pas valide.'); return; }
     setEnvoi(true);
     try {
-      await actions.inviterParCourriel(courriel.trim());
+      await actions.inviterParCourriel(copro.id, courriel.trim());
       toast(`Invitation envoyée à ${courriel.trim()}.`);
       setCourriel('');
     } catch (err) { toast(messageErreur(err)); } finally { setEnvoi(false); }

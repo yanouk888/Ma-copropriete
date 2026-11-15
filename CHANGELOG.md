@@ -1,5 +1,20 @@
 # Journal des versions
 
+## 1.3.0 — 15 novembre 2026
+
+- **Plusieurs copropriétés.** Un logement avec un associé, un autre avec
+  quelqu'un d'autre : chacun devient sa propre copropriété, avec ses dépenses, son
+  hypothèque et son code d'invitation, et chaque co-investisseur ne voit que
+  la sienne. Touchez le nom en haut de l'aperçu pour passer de l'une à
+  l'autre, en ajouter une, et voir le total de votre part.
+- **Les achats en versements.** Une armoire payée en 36 versements : entrez
+  le total, le nombre et la fréquence, l'application compte « versement 7 sur
+  36 » et arrête la dépense après le dernier.
+- **L'adresse ne s'écrit qu'une fois.** En créant une copropriété, son
+  premier logement est créé avec elle, sous le même nom, avec son loyer.
+- **Continuer avec Google est en haut** de l'écran de connexion, visible
+  sans défiler.
+
 ## 1.2.2 — 15 novembre 2026
 
 - Rien ne change dans l'application : la mise en ligne se fait désormais en

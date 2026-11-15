@@ -86,7 +86,53 @@ const recurrenteActive = (d, mois) =>
  * mois pendant douze mois. Non amortie, elle se paie à même le solde du
  * compte et n'apparaît que dans la planification.
  */
+// ───────── Achat en versements ─────────
+
+// Fréquences permises pour un achat payé en plusieurs fois : un marchand
+// propose des versements mensuels, parfois aux deux semaines, rarement plus.
+export const FREQUENCES_VERSEMENTS = ['mensuel', 'aux2semaines', 'hebdo'];
+
+/**
+ * Combien de versements sont payés à la fin d'un mois donné, depuis le
+ * premier. Pour des versements mensuels, un par mois. Aux deux semaines, 26
+ * par an tombent inégalement dans les mois (deux, parfois trois) : on cumule
+ * 26/12 par mois et on arrondit vers le bas, ce qui place le bon nombre de
+ * versements dans l'année sans calendrier jour par jour.
+ */
+function versementsPayesA(d, mois) {
+  const e = ecartMois(d.premier, mois);
+  if (e < 0) return 0;
+  const parMois = FREQUENCES[d.frequence]?.parMois ?? 1;
+  // Le petit epsilon évite qu'un 2,1666…×12 calculé 25,9999 perde un versement.
+  return Math.min(Math.max(0, Math.round(d.nombre)), Math.floor((e + 1) * parMois + 1e-9));
+}
+
+/** Les versements d'un achat qui tombent dans un mois donné. */
+export const versementsDuMois = (d, mois) =>
+  versementsPayesA(d, mois) - versementsPayesA(d, ajouterMois(mois, -1));
+
+/** « 7 sur 36 » : le rang du dernier versement payé à la fin du mois, ou null hors de l'échéancier. */
+export function rangVersement(d, mois) {
+  const paye = versementsPayesA(d, mois);
+  if (paye === 0) return null;
+  if (paye >= d.nombre && versementsDuMois(d, mois) === 0) return null;
+  return { rang: paye, sur: Math.round(d.nombre) };
+}
+
+export const montantDuVersement = (d) => (d.nombre > 0 ? nombre(d.montant) / Math.round(d.nombre) : 0);
+
+/** Le mois du dernier versement. */
+export function dernierVersement(d) {
+  let m = d.premier;
+  // Borné : 600 mois couvrent 50 ans de versements mensuels, bien au-delà de tout achat.
+  for (let i = 0; i < 600 && versementsPayesA(d, m) < Math.round(d.nombre); i++) m = ajouterMois(m, 1);
+  return m;
+}
+
 export function mensualiteDepense(d, mois) {
+  // Un achat en versements pèse dans le fonds exactement ce qu'il coûte ce
+  // mois-là : les versements sont déjà l'étalement, pas besoin de lisser.
+  if (d.type === 'versements') return versementsDuMois(d, mois) * montantDuVersement(d);
   if (d.type === 'ponctuelle') {
     if (!d.amortie) return 0;
     const e = ecartMois(d.amortDebut, mois);
@@ -103,6 +149,7 @@ export function mensualiteDepense(d, mois) {
  * montrer.
  */
 export function sortieReelle(d, mois) {
+  if (d.type === 'versements') return versementsDuMois(d, mois) * montantDuVersement(d);
   if (d.type === 'ponctuelle') return d.mois === mois ? nombre(d.montant) : 0;
   if (!recurrenteActive(d, mois)) return 0;
   const montant = montantEnVigueur(d.paliers, mois);
