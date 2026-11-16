@@ -1,5 +1,6 @@
 // La session : qui est connecté, à quelle copropriété, et tout ce qu'on peut
 // y faire. Un seul contexte, parce que tout l'écran dépend des trois à la fois.
+import { lectureSeule, venteDePart } from '../calc/proprietaires';
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import {
   onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword,
@@ -213,7 +214,21 @@ export function SessionProvider({ children, surErreur }) {
     );
   }, [copro?.id]);
 
+  // Les copropriétés où l'on ne peut plus rien écrire (vendue, ou part
+  // vendue). Les règles refuseraient déjà ; on le dit avant, en clair, au
+  // lieu d'un « permission refusée » une seconde après.
+  const verrouillees = useRef(new Set());
+  useEffect(() => {
+    const uid = user?.uid;
+    verrouillees.current = new Set([...mesCopros, ...(copro ? [copro] : [])].filter((c) => lectureSeule(c, uid)).map((c) => c.id));
+  }, [mesCopros, copro, user?.uid]);
+
   const actions = useMemo(() => {
+    const bloquee = (id) => {
+      if (!verrouillees.current.has(id)) return false;
+      surErreur?.('Cette propriété est vendue : elle se consulte, elle ne se modifie plus.');
+      return true;
+    };
     const refProfil = () => doc(db, 'users', auth.currentUser.uid);
     const nomAffiche = () => nomSaisi.current || profilCourant.current?.nom || auth.currentUser.displayName || auth.currentUser.email?.split('@')[0] || 'Copropriétaire';
     const trace = () => ({ modifiePar: auth.currentUser.uid, modifieLe: serverTimestamp() });
@@ -276,10 +291,12 @@ export function SessionProvider({ children, surErreur }) {
        * modifier() : hors ligne, la promesse ne se résout qu'au retour du réseau.
        */
       enregistrerPaiement(coproId, paiement) {
+        if (bloquee(coproId)) return;
         setDoc(doc(db, 'copros', coproId, 'paiements', paiement.id), { ...paiement, ...trace() })
           .catch((e) => surErreur?.(messageErreur(e)));
       },
       supprimerPaiement(coproId, id) {
+        if (bloquee(coproId)) return;
         deleteDoc(doc(db, 'copros', coproId, 'paiements', id)).catch((e) => surErreur?.(messageErreur(e)));
       },
 
@@ -357,6 +374,7 @@ export function SessionProvider({ children, surErreur }) {
        * est déjà dans le cache et à l'écran. Attendre figerait la fenêtre.
        */
       modifier(id, changements) {
+        if (bloquee(id)) return;
         updateDoc(doc(db, 'copros', id), { ...changements, ...trace() })
           .catch((e) => surErreur?.(messageErreur(e)));
       },
@@ -384,6 +402,18 @@ export function SessionProvider({ children, surErreur }) {
         await lot.commit();
       },
 
+      /** Inscrit la vente d'une part (src/calc/proprietaires.js). Réservé au gestionnaire. */
+      async vendrePart(c, vendeur, acheteur, mois) {
+        await updateDoc(doc(db, 'copros', c.id), { ...venteDePart(c, vendeur, acheteur, mois), ...trace() });
+      },
+      /** L'immeuble entier est vendu : il passe en lecture seule, gardé pour l'impôt. */
+      async vendreCopro(c, mois) {
+        await updateDoc(doc(db, 'copros', c.id), { vendue: { mois }, ...trace() });
+      },
+      async annulerVente(c) {
+        await updateDoc(doc(db, 'copros', c.id), { vendue: deleteField(), ...trace() });
+      },
+
       /** Nouveau code : l'ancien cesse de fonctionner, pour fermer la porte après un départ. */
       async changerCode(c) {
         const code = nouveauCode();
@@ -400,6 +430,7 @@ export function SessionProvider({ children, surErreur }) {
     user, profil, copro, actions, mesCopros, paiements,
     pret: user !== undefined && (user === null || (profil !== undefined && copro !== undefined)),
     estGestionnaire: Boolean(user && copro && copro.gestionnaire === user.uid),
+    lectureSeule: Boolean(user && copro && lectureSeule(copro, user.uid)),
   }), [user, profil, copro, actions, mesCopros, paiements]);
 
   return <Contexte.Provider value={valeur}>{children}</Contexte.Provider>;

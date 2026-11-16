@@ -38,6 +38,22 @@ export const onCoproModifiee = onDocumentUpdated('copros/{coproId}', async (even
     });
   }
 
+  // ─── Ventes ───
+  for (const [u, m] of Object.entries(apres.members || {}).filter(([x, m]) => m.venduLe && !avant.members?.[x]?.venduLe)) {
+    const acheteur = Object.entries(apres.members).find(([x, n]) => x !== u && Number(n.propriete) > Number(avant.members?.[x]?.propriete ?? 0));
+    aTous(membres.filter((x) => x !== auteur), {
+      type: 'membres',
+      title: `${m.displayName} a vendu sa part de ${apres.nom}`,
+      body: `${acheteur ? `${acheteur[1].displayName} la détient` : 'Vendue'} à partir de ${libelleMois(m.venduLe)}.`,
+    });
+  }
+  if (apres.vendue && !avant.vendue) {
+    aTous(autres, { type: 'membres', title: `${apres.nom} est vendue`, body: `Vente inscrite pour ${libelleMois(apres.vendue.mois)} : elle se consulte, elle ne se modifie plus.` });
+    // Le reste (budget, versements) n'a plus de sens pour une propriété vendue.
+    await Promise.all(envois);
+    return;
+  }
+
   // ─── Nouvelles dépenses, nouveaux logements ───
   const depensesAvant = ids(avant.depenses);
   for (const d of (apres.depenses || []).filter((x) => !depensesAvant.has(x.id))) {

@@ -39,7 +39,7 @@ export default function NouvelleCopro({ apres }) {
       {erreur ? <Avis ton="alerte">{erreur}</Avis> : null}
       <form className="champ" style={{ gap: 12 }} onSubmit={lancer(() => actions.rejoindre(code))}>
         <h2>J'ai un code d'invitation</h2>
-        <Champ libelle="Code" aide="Le gestionnaire le trouve dans Réglages → Inviter.">
+        <Champ libelle="Code" aide="Le gestionnaire le trouve dans Réglages → Propriété.">
           <input value={code} onChange={(e) => setCode(e.target.value)} placeholder="COP-XXXXXXXX" autoCapitalize="characters" autoComplete="off" required />
         </Champ>
         <button className="bouton large" disabled={occupe}>Rejoindre</button>

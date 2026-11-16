@@ -87,17 +87,19 @@ button, input, select { font: inherit; color: inherit; }
    dessous, en plus petit. 64 px pour loger ces deux lignes. */
 .barre-titre-contenu { height: 64px; }
 .titre-page { display: flex; align-items: center; gap: 10px; min-width: 0; flex: 1 1 auto; }
+/* Toute la marque se touche pour changer de propriété : une cible large, au pouce. */
+button.titre-page { padding: 4px 6px 4px 0; margin: 0; border: 0; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; border-radius: 12px; }
+button.titre-page:hover .titre-page-nom, button.titre-page:hover .titre-page-copro { color: var(--primaire); }
+.chevron-titre { flex: none; color: var(--texte-2); }
 .titre-page .logo { flex: none; border-radius: 10px; box-shadow: 0 2px 6px rgba(19, 78, 66, .25); }
 .titre-page-textes { display: grid; min-width: 0; }
 .titre-page-nom { font-size: 1.3rem; font-weight: 750; letter-spacing: -.02em; line-height: 1.15; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; animation: arrive .35s var(--doux) both; }
 .titre-page-copro {
   display: inline-flex; align-items: center; gap: 2px; min-width: 0; max-width: 100%; justify-self: start;
-  padding: 2px 0; margin: 0; border: 0; background: none; cursor: pointer;
-  color: var(--texte-2); font: inherit; font-size: .82rem; font-weight: 600;
+  padding-top: 1px; color: var(--texte-2); font-size: .82rem; font-weight: 600;
 }
 .titre-page-copro span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .titre-page-copro svg { flex: none; }
-.titre-page-copro:hover { color: var(--primaire); }
 .actions-entete { display: flex; align-items: center; gap: 6px; flex: none; }
 .menu-ancre { position: relative; }
 .bouton-entete {
@@ -663,3 +665,17 @@ dialog.feuille[open]::backdrop { animation: paraît .25s both; }
   .section-reglages, .feuille-plus, .feuille-plus .plus-item, .menu-deroulant, .titre-page-nom { animation: none; }
   .sous-glisseur { transition: none; }
 }
+
+/* ───────── Propriété vendue ─────────
+   Elle se consulte : un bandeau le dit en haut de chaque page, et les
+   boutons d'ajout des en-têtes s'effacent. Les écritures, elles, sont
+   arrêtées par la session et par les règles. */
+.bandeau-vendue {
+  display: grid; gap: 2px; padding: 12px 14px; border-radius: 14px;
+  background: color-mix(in srgb, var(--texte-2) 12%, var(--surface)); border: 1px solid var(--trait);
+}
+.bandeau-vendue span { color: var(--texte-2); font-size: .88rem; }
+.lecture-seule .entete .bouton, .lecture-seule .carte > header .bouton { display: none; }
+.etiquette-vendue { padding: 3px 10px; border-radius: 999px; background: color-mix(in srgb, var(--texte-2) 14%, transparent); color: var(--texte-2); font-size: .75rem; font-weight: 700; white-space: nowrap; }
+.petit-titre { font-size: .78rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--texte-2); padding-bottom: 2px; }
+.liste.proprietaires { gap: 0; }

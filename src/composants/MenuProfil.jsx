@@ -35,10 +35,15 @@ export default function MenuProfil({ allerA }) {
               <small className="discret">{user.email}</small>
               {estGestionnaire ? <span className="etiquette">Gestionnaire</span> : null}
             </div>
-            <button type="button" role="menuitem" className="menu-item" onClick={() => aller('reglages:profil')}>Mon profil</button>
-            <button type="button" role="menuitem" className="menu-item" onClick={() => aller('reglages:copropriete')}>Copropriétaires et invitation</button>
-            <button type="button" role="menuitem" className="menu-item" onClick={() => aller('reglages:notifications')}>Notifications</button>
-            <div className="menu-sep" />
+            {/* Sans propriété ouverte, Réglages n'existe pas encore : il ne reste que la déconnexion. */}
+            {allerA ? (
+              <>
+                <button type="button" role="menuitem" className="menu-item" onClick={() => aller('reglages:profil')}>Mon profil</button>
+                <button type="button" role="menuitem" className="menu-item" onClick={() => aller('reglages:copropriete')}>Propriétaires et invitation</button>
+                <button type="button" role="menuitem" className="menu-item" onClick={() => aller('reglages:notifications')}>Notifications</button>
+                <div className="menu-sep" />
+              </>
+            ) : null}
             <button type="button" role="menuitem" className="menu-item danger" onClick={() => { setOuvert(false); actions.deconnexion(); }}>Se déconnecter</button>
           </div>
         </>

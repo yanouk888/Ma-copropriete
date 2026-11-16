@@ -4,9 +4,10 @@ import { SessionProvider, useSession } from './donnees/Session';
 import { Icone, Toasts, useToast } from './composants/ui';
 import Connexion from './pages/Connexion';
 import Logo from './composants/Logo';
+import BarreDuHaut, { Chevron } from './composants/BarreDuHaut';
+import { libelleMois } from './calc/mois';
 import AvisMiseAJour from './composants/AvisMiseAJour';
 import { FeuilleMesCopros } from './composants/MesCopros';
-import Cloche from './composants/Cloche';
 import MenuProfil from './composants/MenuProfil';
 import { signalerPrete } from './donnees/amorce';
 import Bienvenue from './pages/Bienvenue';
@@ -37,7 +38,7 @@ function Coquille() {
   const [onglet, sousOnglet] = cible.split(':');
   const [plus, setPlus] = useState(false);
   const [copros, setCopros] = useState(false);
-  const { copro } = useSession();
+  const { copro, lectureSeule, user } = useSession();
   const courant = ONGLETS.find((o) => o.cle === onglet);
   const { Ecran } = courant;
   const allerA = (c) => { setPlus(false); setCible(c); };
@@ -56,32 +57,33 @@ function Coquille() {
   const plusActif = plus || rang < 0;
   return (
     <>
-      {/* La barre du haut, comme Budget Maison : le titre de la page ouverte —
-          pas le nom de l'application, qui ne dit jamais où l'on est — et,
-          dessous, la copropriété ouverte, qu'on touche pour en changer. À
-          droite, la cloche et l'avatar. */}
-      <header className="barre-titre">
-        <div className="barre-titre-contenu">
-          <div className="titre-page">
-            <Logo taille={36} />
-            <div className="titre-page-textes">
-              <span className="titre-page-nom">{courant.titre}</span>
-              <button type="button" className="titre-page-copro" onClick={() => setCopros(true)} aria-haspopup="dialog"
-                aria-label={`Copropriété ouverte : ${copro.nom}. Changer de copropriété`}>
-                <span>{copro.nom}</span>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
-              </button>
-            </div>
-          </div>
-          <div className="actions-entete">
-            <Cloche />
-            <MenuProfil allerA={allerA} />
-          </div>
-        </div>
-      </header>
+      {/* La barre du haut : l'entreprise qui gère l'immeuble, et dessous
+          l'immeuble ouvert ; le tout se touche pour changer d'immeuble. La
+          page ouverte se lit dans la barre du bas. Sans entreprise saisie,
+          l'immeuble seul. À droite, la cloche et l'avatar. */}
+      <BarreDuHaut>
+        <button type="button" className="titre-page" onClick={() => setCopros(true)} aria-haspopup="dialog"
+          aria-label={`${copro.entreprise ? `${copro.entreprise}, ` : ''}${copro.nom}${courant ? `, page ${courant.titre}` : ''}. Changer de propriété`}>
+          <Logo taille={36} />
+          <span className="titre-page-textes">
+            <span className="titre-page-nom">{copro.entreprise || copro.nom}</span>
+            {copro.entreprise ? <span className="titre-page-copro"><span>{copro.nom}</span>{Chevron}</span> : null}
+          </span>
+          {copro.entreprise ? null : Chevron}
+        </button>
+        <MenuProfil allerA={allerA} />
+      </BarreDuHaut>
       {copros ? <FeuilleMesCopros onFermer={() => setCopros(false)} /> : null}
       {/* La clé remonte l'écran à chaque changement d'onglet : c'est ce qui rejoue l'arrivée des cartes. */}
-      <main className="page" key={cible}><Ecran allerA={allerA} sousOnglet={sousOnglet} /></main>
+      <main className={`page${lectureSeule ? ' lecture-seule' : ''}`} key={cible}>
+        {lectureSeule ? (
+          <div className="bandeau-vendue" role="note">
+            <strong>{copro.vendue ? `Vendue en ${libelleMois(copro.vendue.mois)}` : `Votre part vendue en ${libelleMois(copro.members[user.uid].venduLe)}`}</strong>
+            <span>Elle se consulte — rapport annuel, pièces jointes — mais ne se modifie plus.</span>
+          </div>
+        ) : null}
+        <Ecran allerA={allerA} sousOnglet={sousOnglet} />
+      </main>
       <div className="barre">
         <nav aria-label="Sections">
           <span className="glisseur" style={{ '--position': rangPilule }} aria-hidden="true" />
@@ -124,6 +126,7 @@ function Aiguillage() {
   useEffect(() => { if (pret) signalerPrete(); }, [pret]);
   if (!pret) return <div className="centre"><p className="discret" role="status">Chargement…</p></div>;
   if (!user) return <Connexion />;
+  // Sans propriété, on entre quand même : un code ou une création, maintenant ou plus tard.
   if (!copro) return <Bienvenue />;
   return <Coquille />;
 }

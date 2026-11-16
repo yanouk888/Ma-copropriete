@@ -1,5 +1,21 @@
 # Journal des versions
 
+## 1.7.0 — 15 novembre 2026
+
+- **Le nom de l'entreprise qui gère la propriété** titre maintenant la barre
+  du haut (par exemple « Gestion Exemple inc. »), avec la propriété juste
+  dessous. Il se saisit dans Réglages → Propriété, « Gérée par ».
+- **Chaque propriété nomme ses propriétaires** : dans Réglages → Propriété,
+  et dans « Mes copropriétés », sous chaque nom.
+- **Vendre une part** : le gestionnaire inscrit le vendeur, l'acheteur et le
+  mois. L'acheteur reprend la part ; le vendeur garde l'accès en lecture, et
+  le rapport annuel répartit l'année entre les deux, au mois près.
+- **Vendre la propriété** : elle passe en lecture seule, toujours consultable
+  pour son rapport et ses pièces jointes, et sort de vos totaux. Une vente
+  inscrite par erreur s'annule.
+- **Plus besoin de code pour entrer** : après l'inscription, on arrive dans
+  l'application, et on ajoute une propriété quand on veut.
+
 ## 1.6.0 — 15 novembre 2026
 
 - **Un écran d'accueil** à l'ouverture, avec le logo, le temps que vos

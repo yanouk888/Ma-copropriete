@@ -9,6 +9,7 @@ import { getAuth } from 'firebase-admin/auth';
 import { cleResend, adresseApp, envoyerCourriel } from './courriel.js';
 import { courrielResume } from './modeles.js';
 import { moisCourant } from './envoyer.js';
+import { estVendue, aVendu } from '../calc/proprietaires.js';
 
 export const resumeMensuel = onSchedule(
   { schedule: '0 8 1 * *', timeZone: 'America/Toronto', secrets: [cleResend] },
@@ -21,7 +22,8 @@ export const resumeMensuel = onSchedule(
 
     for (const doc of copros.docs) {
       const copro = doc.data();
-      for (const uid of copro.memberUids || []) {
+      if (estVendue(copro)) continue;
+      for (const uid of (copro.memberUids || []).filter((u) => !aVendu(copro, u))) {
         try {
           const profil = (await db.collection('users').doc(uid).get()).data();
           if (profil?.courriels?.resume === false) continue;
