@@ -11,6 +11,7 @@ import {
   getFirestore, connectFirestoreEmulator, doc, collection, getDoc, getDocs, setDoc, updateDoc, deleteDoc,
   writeBatch, arrayUnion, arrayRemove, deleteField, terminate,
 } from 'firebase/firestore';
+import { venteDePart } from '../src/calc/proprietaires.js';
 
 let echecs = 0;
 const suffixe = Date.now();
@@ -124,6 +125,29 @@ await attendu('gestionnaire : changer le code d\'un seul lot', true, () => {
 await attendu('entrer avec l\'ancien code', false, () => entrer(etranger, fiche(0, { codeUtilise: code })));
 await attendu('gestionnaire : partir sans céder la gestion', false, () =>
   updateDoc(ref(gest), { memberUids: arrayRemove(gest.uid), [`members.${gest.uid}`]: deleteField() }));
+
+// ─── Les ventes ───
+// Les changements viennent de la même fonction que l'interface : c'est ce
+// qu'elle écrira vraiment qui doit passer.
+const lue = (await getDoc(ref(gest))).data();
+await attendu('membre : se déclarer vendeur lui-même', false, () => updateDoc(ref(membre), { [`members.${membre.uid}.venduLe`]: '2027-06' }));
+await attendu('membre : déclarer l\'immeuble vendu', false, () => updateDoc(ref(membre), { vendue: { mois: '2027-06' } }));
+await attendu('membre : réécrire l\'historique des parts', false, () => updateDoc(ref(membre), { historiqueParts: [] }));
+await attendu('gestionnaire : inscrire la vente d\'une part', true, () => updateDoc(ref(gest), venteDePart(lue, membre.uid, gest.uid, '2027-06')));
+await attendu('vendeur : lire encore la copropriété', true, () => getDoc(ref(membre)));
+await attendu('vendeur : lire encore les paiements', true, () => getDocs(collection(membre.db, 'copros', id, 'paiements')));
+await attendu('vendeur : modifier le budget', false, () => updateDoc(ref(membre), { 'interetsDeclares.2026': 1 }));
+await attendu('vendeur : changer son nom', false, () => updateDoc(ref(membre), { [`members.${membre.uid}.displayName`]: 'Autre' }));
+await attendu('vendeur : confirmer un paiement', false, () => paiement(membre));
+await attendu('gestionnaire : redonner la gestion au vendeur', false, () => updateDoc(ref(gest), { gestionnaire: membre.uid }));
+await attendu('gestionnaire : vendre l\'immeuble', true, () => updateDoc(ref(gest), { vendue: { mois: '2027-09' } }));
+await attendu('immeuble vendu : modifier le budget', false, () => updateDoc(ref(gest), { 'interetsDeclares.2026': 2 }));
+await attendu('immeuble vendu : confirmer un paiement', false, () => paiement(gest));
+await attendu('immeuble vendu : effacer un paiement', false, () => deleteDoc(doc(gest.db, 'copros', id, 'paiements', 'depense-a-2026-01')));
+await attendu('immeuble vendu : régler les parts', false, () => updateDoc(ref(gest), { [`members.${gest.uid}.proportion`]: 99 }));
+await attendu('immeuble vendu : lire encore', true, () => getDoc(ref(gest)));
+await attendu('gestionnaire : annuler la vente de l\'immeuble', true, () => updateDoc(ref(gest), { vendue: deleteField() }));
+await attendu('après l\'annulation : modifier le budget', true, () => updateDoc(ref(gest), { 'interetsDeclares.2026': 3 }));
 
 // ─── Partir ───
 await attendu('membre : partir en emmenant le gestionnaire', false, () =>

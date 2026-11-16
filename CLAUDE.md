@@ -47,6 +47,11 @@ si elle est nécessaire.
   (intitulés du T776 et du TP-128, **sans numéros de ligne** : ils n'ont pas pu
   être vérifiés à la source et changent selon l'année).
 
+- `src/calc/proprietaires.js` — les ventes : d'une part (le vendeur reste
+  membre, en lecture, avec `venduLe`) ou de l'immeuble (`vendue`, lecture
+  seule pour tous). `historiqueParts` garde les parts de chaque période, pour
+  que le rapport annuel répartisse l'année au mois près.
+
 Le document `copros/{id}` porte toute une copropriété. Les montants des loyers
 et des dépenses récurrentes sont des **paliers** `{ depuis, montant }` : on ne
 réécrit pas le passé, on pose un nouveau montant « à partir de » un mois.

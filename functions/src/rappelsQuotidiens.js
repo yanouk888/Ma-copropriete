@@ -4,6 +4,7 @@ import { getFirestore } from 'firebase-admin/firestore';
 import { planifier, premierMoisNegatif } from '../calc/budget.js';
 import { libelleMois, ecartMois } from '../calc/mois.js';
 import { notifier, moisCourant } from './envoyer.js';
+import { estVendue, aVendu } from '../calc/proprietaires.js';
 
 // À combien de jours du renouvellement on prévient : le temps de magasiner un
 // taux (90), de signer (30), et un dernier rappel.
@@ -22,7 +23,10 @@ export const rappelsQuotidiens = onSchedule(
 
     for (const doc of copros.docs) {
       const copro = doc.data();
-      const membres = copro.memberUids || [];
+      // Une propriété vendue n'a plus d'hypothèque ni de solde à surveiller,
+      // et qui a vendu sa part n'a plus à en entendre parler.
+      if (estVendue(copro)) continue;
+      const membres = (copro.memberUids || []).filter((u) => !aVendu(copro, u));
 
       // ─── Renouvellement de l'hypothèque ───
       const terme = copro.hypotheque?.renouvellement;

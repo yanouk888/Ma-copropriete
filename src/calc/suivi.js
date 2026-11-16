@@ -4,6 +4,7 @@
 // réellement entré et sorti, mois par mois, confirmé par un copropriétaire,
 // avec la facture. Le rapport d'impôt ne se fie qu'au suivi : une facture de
 // 437 $ prévue à 400 $ doit compter pour 437 $.
+import { partsAuMois, nomProprietaire } from './proprietaires.js';
 import { loyerDuMois, sortieReelle, deroulerHypotheque, mensualiteHypotheque } from './budget.js';
 import { ajouterMois, ecartMois } from './mois.js';
 
@@ -163,14 +164,38 @@ export function rapportAnnuel(copro, paiements, annee) {
   const depenses = arrondi(rubriques.reduce((s, r) => s + r.montant, 0));
   const net = arrondi(revenus - depenses);
 
-  const parts = partsDePropriete(copro);
-  const proprietaires = Object.entries(copro.members || {}).map(([uid, m]) => {
-    const pct = parts[uid] / 100;
+  // La part de chacun, mois par mois : celui qui a vendu en juin ne déclare
+  // que ses mois de propriétaire (src/calc/proprietaires.js).
+  const moisDeLAnnee = Array.from({ length: 12 }, (_, i) => `${annee}-${String(i + 1).padStart(2, '0')}`);
+  const partsMois = Object.fromEntries(moisDeLAnnee.map((m) => [m, partsAuMois(copro, m)]));
+  const uids = [...new Set([...Object.keys(copro.members || {}), ...moisDeLAnnee.flatMap((m) => Object.keys(partsMois[m]))])];
+  const partDe = (uid, mois) => nombre(partsMois[mois]?.[uid]) / 100;
+  const parMois = (filtre, valeur) => {
+    const t = {};
+    for (const p of deLAnnee.filter(filtre)) t[p.mois] = (t[p.mois] || 0) + valeur(p);
+    return t;
+  };
+  const revenusMois = parMois((p) => p.sens === 'entree', (p) => nombre(p.montant));
+  const courantesMois = parMois((p) => p.sens === 'sortie' && p.source?.type !== 'hypotheque' && p.nature !== 'capital', (p) => nombre(p.montant));
+  const interetsMois = parMois((p) => p.sens === 'sortie' && p.source?.type === 'hypotheque', (p) => Math.min(nombre(p.montant), nombre(p.interet)));
+  const somme = (t, uid) => Object.entries(t).reduce((s, [m, v]) => s + v * partDe(uid, m), 0);
+  const proprietaires = uids.map((uid) => {
+    const moyenne = moisDeLAnnee.reduce((s, m) => s + partDe(uid, m), 0) / 12;
+    // Les intérêts déclarés (relevé du prêteur) se répartissent comme les
+    // intérêts calculés ; sans paiement confirmé, selon la part moyenne.
+    const partInterets = interetsCalcules > 0 ? somme(interetsMois, uid) / interetsCalcules : moyenne;
+    const rev = somme(revenusMois, uid);
+    const dep = somme(courantesMois, uid) + interetsHypotheque * partInterets;
+    const pourcents = moisDeLAnnee.map((m) => partDe(uid, m) * 100);
     return {
-      uid, nom: m.displayName, pourcent: parts[uid],
-      revenus: arrondi(revenus * pct), depenses: arrondi(depenses * pct), net: arrondi(net * pct),
+      uid, nom: nomProprietaire(copro, uid),
+      pourcent: arrondi(moyenne * 100),
+      // Une part qui a changé dans l'année : le pourcentage affiché est une moyenne.
+      varie: pourcents.some((x) => Math.abs(x - pourcents[0]) > 0.001),
+      revenus: arrondi(rev), depenses: arrondi(dep), net: arrondi(rev - dep),
     };
-  });
+  }).filter((p) => p.pourcent > 0 || copro.members?.[p.uid]);
+  const parts = Object.fromEntries(proprietaires.map((p) => [p.uid, p.pourcent]));
 
   return {
     annee, revenus, rubriques, depenses, net,
